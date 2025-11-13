@@ -1,0 +1,693 @@
+// Copyright (c) 2025 AccelByte Inc. All Rights Reserved.
+// This is licensed software from AccelByte Inc, for limitations
+// and restrictions contact your company contract manager.
+
+// source: Session/AsyncAPI/session.yaml (0.1.0)
+
+syntax = "proto3";
+
+package accelbyte.session.session.v1;
+// Version v1.0.0
+
+// --- imports ---
+
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+
+// --- options ---
+
+option csharp_namespace = "AccelByte.Session.Session";
+option go_package = "accelbyte.net/session/session";
+option java_multiple_files = true;
+option java_package = "net.accelbyte.session.session";
+
+// --- schema objects ---
+
+// path: #/components/schemas/event
+message Event {
+    string id = 1 [json_name = "id"];
+    int64 version = 2 [json_name = "version"];
+    string name = 3 [json_name = "name"];
+    string namespace = 4 [json_name = "namespace"];
+    string parent_namespace = 5 [json_name = "parentNamespace"];
+    string timestamp = 6 [json_name = "timestamp"];
+    string user_id = 7 [json_name = "userId"];
+    string trace_id = 8 [json_name = "traceId"];
+    string session_id = 9 [json_name = "sessionId"];
+    string span_context = 10 [json_name = "spanContext"];
+}
+
+// path: #/components/schemas/notificationPayload
+message NotificationPayload {
+    repeated string user_ids = 1 [json_name = "userIds"];
+    string namespace = 2 [json_name = "namespace"];
+    string topic_name = 3 [json_name = "topicName"];
+    string message = 4 [json_name = "message"];
+}
+
+// path: #/components/schemas/GameSessionNotificationCreatedV1
+message GameSessionNotificationCreatedV1 {
+    string created_by = 1 [json_name = "CreatedBy"];
+    repeated UserV1 members = 2 [json_name = "Members"];
+    string session_id = 3 [json_name = "SessionID"];
+    repeated Team teams = 4 [json_name = "Teams"];
+    bool text_chat = 5 [json_name = "TextChat"];
+    string text_chat_mode = 6 [json_name = "TextChatMode"];
+}
+
+// path: #/components/schemas/Team
+message Team {
+    repeated PartyMembers parties = 1 [json_name = "parties"];
+    string team_id = 2 [json_name = "teamID"];
+    repeated string user_i_ds = 3 [json_name = "userIDs"];
+}
+
+// path: #/components/schemas/UserV1
+message UserV1 {
+    string id = 1 [json_name = "ID"];
+    string platform_id = 2 [json_name = "PlatformID"];
+    string platform_user_id = 3 [json_name = "PlatformUserID"];
+    string previous_status = 4 [json_name = "PreviousStatus"];
+    string status = 5 [json_name = "Status"];
+    string status_v2 = 6 [json_name = "StatusV2"];
+    string updated_at = 7 [json_name = "UpdatedAt"];
+}
+
+// path: #/components/schemas/PartyMembers
+message PartyMembers {
+    string party_id = 1 [json_name = "partyID"];
+    repeated string user_i_ds = 2 [json_name = "userIDs"];
+}
+
+// path: #/components/messages/sessionNotification/payload
+message SessionNotification {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/OnSessionEnded/payload
+message OnSessionEnded {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionEndedEvent/payload
+message GameSessionEndedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionInvitedEvent/payload
+message GameSessionInvitedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionJoinedEvent/payload
+message GameSessionJoinedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionMembersChangedEvent/payload
+message GameSessionMembersChangedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionKickedEvent/payload
+message GameSessionKickedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionCreatedEvent/payload
+message GameSessionCreatedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionUpdatedEvent/payload
+message GameSessionUpdatedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionRejectedEvent/payload
+message GameSessionRejectedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionDSStatusChangedEvent/payload
+message GameSessionDSStatusChangedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionCodeChangedEvent/payload
+message GameSessionCodeChangedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/GameSessionCodeRevokedEvent/payload
+message GameSessionCodeRevokedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/PartyCreatedEvent/payload
+message PartyCreatedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/PartyUpdatedEvent/payload
+message PartyUpdatedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/PartyLeaveEvent/payload
+message PartyLeaveEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/PartyKickedEvent/payload
+message PartyKickedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/PartyInvitedEvent/payload
+message PartyInvitedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/PartyRejectedEvent/payload
+message PartyRejectedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/PartyJoinedEvent/payload
+message PartyJoinedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+// path: #/components/messages/PartyMembersChangedEvent/payload
+message PartyMembersChangedEvent {
+    NotificationPayload payload = 1 [json_name = "payload"];
+
+    // allOf(#/components/schemas/event)
+    string id = 2 [json_name = "id"];
+    int64 version = 3 [json_name = "version"];
+    string name = 4 [json_name = "name"];
+    string namespace = 5 [json_name = "namespace"];
+    string parent_namespace = 6 [json_name = "parentNamespace"];
+    string timestamp = 7 [json_name = "timestamp"];
+    string user_id = 8 [json_name = "userId"];
+    string trace_id = 9 [json_name = "traceId"];
+    string session_id = 10 [json_name = "sessionId"];
+    string span_context = 11 [json_name = "spanContext"];
+}
+
+
+// --- #/components/messages/{message_name} ---
+
+// path: #/components/messages/onPartyCreated
+message OnPartyCreatedMessage {
+    Event payload = 1;
+}
+
+// path: #/components/messages/sessionNotification
+message SessionNotificationMessage {
+    SessionNotification payload = 1;
+}
+
+// path: #/components/messages/OnSessionEnded
+message OnSessionEndedMessage {
+    OnSessionEnded payload = 1;
+}
+
+// path: #/components/messages/GameSessionEndedEvent
+message GameSessionEndedEventMessage {
+    GameSessionEndedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionInvitedEvent
+message GameSessionInvitedEventMessage {
+    GameSessionInvitedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionJoinedEvent
+message GameSessionJoinedEventMessage {
+    GameSessionJoinedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionMembersChangedEvent
+message GameSessionMembersChangedEventMessage {
+    GameSessionMembersChangedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionKickedEvent
+message GameSessionKickedEventMessage {
+    GameSessionKickedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionCreatedEvent
+message GameSessionCreatedEventMessage {
+    GameSessionCreatedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionUpdatedEvent
+message GameSessionUpdatedEventMessage {
+    GameSessionUpdatedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionRejectedEvent
+message GameSessionRejectedEventMessage {
+    GameSessionRejectedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionDSStatusChangedEvent
+message GameSessionDSStatusChangedEventMessage {
+    GameSessionDSStatusChangedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionCodeChangedEvent
+message GameSessionCodeChangedEventMessage {
+    GameSessionCodeChangedEvent payload = 1;
+}
+
+// path: #/components/messages/GameSessionCodeRevokedEvent
+message GameSessionCodeRevokedEventMessage {
+    GameSessionCodeRevokedEvent payload = 1;
+}
+
+// path: #/components/messages/PartyCreatedEvent
+message PartyCreatedEventMessage {
+    PartyCreatedEvent payload = 1;
+}
+
+// path: #/components/messages/PartyUpdatedEvent
+message PartyUpdatedEventMessage {
+    PartyUpdatedEvent payload = 1;
+}
+
+// path: #/components/messages/PartyLeaveEvent
+message PartyLeaveEventMessage {
+    PartyLeaveEvent payload = 1;
+}
+
+// path: #/components/messages/PartyKickedEvent
+message PartyKickedEventMessage {
+    PartyKickedEvent payload = 1;
+}
+
+// path: #/components/messages/PartyInvitedEvent
+message PartyInvitedEventMessage {
+    PartyInvitedEvent payload = 1;
+}
+
+// path: #/components/messages/PartyRejectedEvent
+message PartyRejectedEventMessage {
+    PartyRejectedEvent payload = 1;
+}
+
+// path: #/components/messages/PartyJoinedEvent
+message PartyJoinedEventMessage {
+    PartyJoinedEvent payload = 1;
+}
+
+// path: #/components/messages/PartyMembersChangedEvent
+message PartyMembersChangedEventMessage {
+    PartyMembersChangedEvent payload = 1;
+}
+
+
+// --- #/channels/{channel_name}/{operation_type}/message ---
+
+// path: #/channels/mpv2SessionHistory/publish/message
+message Mpv2SessionHistoryPublish {
+    oneof payload {
+        GameSessionEndedEventMessage variant0 = 1;
+        GameSessionInvitedEventMessage variant1 = 2;
+        GameSessionJoinedEventMessage variant2 = 3;
+        GameSessionMembersChangedEventMessage variant3 = 4;
+        GameSessionKickedEventMessage variant4 = 5;
+        GameSessionCreatedEventMessage variant5 = 6;
+        GameSessionUpdatedEventMessage variant6 = 7;
+        GameSessionRejectedEventMessage variant7 = 8;
+        GameSessionDSStatusChangedEventMessage variant8 = 9;
+        GameSessionCodeChangedEventMessage variant9 = 10;
+        GameSessionCodeRevokedEventMessage variant10 = 11;
+        PartyCreatedEventMessage variant11 = 12;
+        PartyUpdatedEventMessage variant12 = 13;
+        PartyKickedEventMessage variant13 = 14;
+        PartyLeaveEventMessage variant14 = 15;
+        PartyInvitedEventMessage variant15 = 16;
+        PartyRejectedEventMessage variant16 = 17;
+        PartyJoinedEventMessage variant17 = 18;
+        PartyMembersChangedEventMessage variant18 = 19;
+    }
+}
+
+
+// --- service ---
+
+
+// Publishes a message to the Session channel. (session Event)
+service SessionEventService {
+    rpc OnMessage(Event) returns (google.protobuf.Empty);
+}
+
+// Publishes a message to the Session Notification channel. (sessionNotification SessionNotification)
+service SessionNotificationSessionNotificationService {
+    rpc OnMessage(SessionNotification) returns (google.protobuf.Empty);
+}
+
+// Publishes a message to the Session Event channel. (sessionEvent OnSessionEnded)
+service SessionEventOnSessionEndedService {
+    rpc OnMessage(OnSessionEnded) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionEndedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionEndedEvent)
+service Mpv2SessionHistoryGameSessionEndedEventService {
+    rpc OnMessage(GameSessionEndedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionInvitedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionInvitedEvent)
+service Mpv2SessionHistoryGameSessionInvitedEventService {
+    rpc OnMessage(GameSessionInvitedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionJoinedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionJoinedEvent)
+service Mpv2SessionHistoryGameSessionJoinedEventService {
+    rpc OnMessage(GameSessionJoinedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionMembersChangedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionMembersChangedEvent)
+service Mpv2SessionHistoryGameSessionMembersChangedEventService {
+    rpc OnMessage(GameSessionMembersChangedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionKickedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionKickedEvent)
+service Mpv2SessionHistoryGameSessionKickedEventService {
+    rpc OnMessage(GameSessionKickedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionCreatedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionCreatedEvent)
+service Mpv2SessionHistoryGameSessionCreatedEventService {
+    rpc OnMessage(GameSessionCreatedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionUpdatedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionUpdatedEvent)
+service Mpv2SessionHistoryGameSessionUpdatedEventService {
+    rpc OnMessage(GameSessionUpdatedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionRejectedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionRejectedEvent)
+service Mpv2SessionHistoryGameSessionRejectedEventService {
+    rpc OnMessage(GameSessionRejectedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionDSStatusChangedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionDSStatusChangedEvent)
+service Mpv2SessionHistoryGameSessionDSStatusChangedEventService {
+    rpc OnMessage(GameSessionDSStatusChangedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionCodeChangedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionCodeChangedEvent)
+service Mpv2SessionHistoryGameSessionCodeChangedEventService {
+    rpc OnMessage(GameSessionCodeChangedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a GameSessionCodeRevokedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory GameSessionCodeRevokedEvent)
+service Mpv2SessionHistoryGameSessionCodeRevokedEventService {
+    rpc OnMessage(GameSessionCodeRevokedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a PartyCreatedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory PartyCreatedEvent)
+service Mpv2SessionHistoryPartyCreatedEventService {
+    rpc OnMessage(PartyCreatedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a PartyUpdatedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory PartyUpdatedEvent)
+service Mpv2SessionHistoryPartyUpdatedEventService {
+    rpc OnMessage(PartyUpdatedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a PartyKickedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory PartyKickedEvent)
+service Mpv2SessionHistoryPartyKickedEventService {
+    rpc OnMessage(PartyKickedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a PartyLeaveEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory PartyLeaveEvent)
+service Mpv2SessionHistoryPartyLeaveEventService {
+    rpc OnMessage(PartyLeaveEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a PartyInvitedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory PartyInvitedEvent)
+service Mpv2SessionHistoryPartyInvitedEventService {
+    rpc OnMessage(PartyInvitedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a PartyRejectedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory PartyRejectedEvent)
+service Mpv2SessionHistoryPartyRejectedEventService {
+    rpc OnMessage(PartyRejectedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a PartyJoinedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory PartyJoinedEvent)
+service Mpv2SessionHistoryPartyJoinedEventService {
+    rpc OnMessage(PartyJoinedEvent) returns (google.protobuf.Empty);
+}
+
+// Publishes a PartyMembersChangedEvent to the Mpv2 Session History channel. (oneOf variant) (mpv2SessionHistory PartyMembersChangedEvent)
+service Mpv2SessionHistoryPartyMembersChangedEventService {
+    rpc OnMessage(PartyMembersChangedEvent) returns (google.protobuf.Empty);
+}
