@@ -45,11 +45,13 @@ import (
 )
 
 const (
-	environment     = "production"
-	id              = int64(1)
-	metricsEndpoint = "/metrics"
-	metricsPort     = 8080
-	grpcServerPort  = 6565
+	environment          = "production"
+	id                   = int64(1)
+	metricsEndpoint      = "/metrics"
+	metricsPort          = 8080
+	grpcServerPort       = 6565
+	defaultVoiceBaseURL  = "https://api.epicgames.dev"
+	defaultVoiceTokenURL = "https://api.epicgames.dev/auth/v1/oauth/token"
 )
 
 var (
@@ -120,12 +122,9 @@ func main() {
 
 	// Configure voice orchestration
 	absNamespace := common.GetEnv("AB_NAMESPACE", "accelbyte")
-	voiceBaseURL := common.GetEnv("EOS_VOICE_BASE_URL", "https://api.epicgames.dev/rtc/")
 	voiceDeploymentID := common.GetEnv("EOS_VOICE_DEPLOYMENT_ID", "")
-	voiceTokenURL := common.GetEnv("EOS_VOICE_TOKEN_URL", "https://api.epicgames.dev/epic/oauth/v2/token")
 	voiceClientID := common.GetEnv("EOS_VOICE_CLIENT_ID", "")
 	voiceClientSecret := common.GetEnv("EOS_VOICE_CLIENT_SECRET", "")
-	voiceScope := common.GetEnv("EOS_VOICE_SCOPE", "basic_profile friends_list presence")
 	voiceTopic := common.GetEnv("EOS_VOICE_NOTIFICATION_TOPIC", "EOS_VOICE")
 	if voiceDeploymentID == "" {
 		logrus.Fatal("EOS_VOICE_DEPLOYMENT_ID environment variable is required")
@@ -134,12 +133,11 @@ func main() {
 		logrus.Fatal("EOS_VOICE_CLIENT_ID and EOS_VOICE_CLIENT_SECRET environment variables are required")
 	}
 	voiceHTTPClient, err := voiceclient.New(voiceclient.Config{
-		BaseURL:      voiceBaseURL,
+		BaseURL:      defaultVoiceBaseURL,
 		DeploymentID: voiceDeploymentID,
-		TokenURL:     voiceTokenURL,
+		TokenURL:     defaultVoiceTokenURL,
 		ClientID:     voiceClientID,
 		ClientSecret: voiceClientSecret,
-		Scope:        voiceScope,
 	})
 	if err != nil {
 		logrus.Fatalf("failed to configure EOS voice client: %v", err)
@@ -147,11 +145,6 @@ func main() {
 
 	sessionClient := factory.NewSessionClient(configRepo)
 	gameSessionService := sessionsvc.GameSessionService{
-		Client:           sessionClient,
-		ConfigRepository: configRepo,
-		TokenRepository:  tokenRepo,
-	}
-	partyService := sessionsvc.PartyService{
 		Client:           sessionClient,
 		ConfigRepository: configRepo,
 		TokenRepository:  tokenRepo,
@@ -167,7 +160,6 @@ func main() {
 		NotificationTopic:   voiceTopic,
 		VoiceClient:         voiceHTTPClient,
 		GameSessionService:  gameSessionService,
-		PartyService:        partyService,
 		NotificationService: notificationService,
 		Logger:              logrusLogger.WithField("component", "voice"),
 	})

@@ -22,7 +22,6 @@ type Config struct {
 	TokenURL     string
 	ClientID     string
 	ClientSecret string
-	Scope        string
 	HTTPClient   *http.Client
 }
 
@@ -89,7 +88,6 @@ func New(cfg Config) (*Client, error) {
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
 		DeploymentID: cfg.DeploymentID,
-		Scope:        cfg.Scope,
 		HTTPClient:   httpClient,
 	})
 	if err != nil {
@@ -289,7 +287,6 @@ type tokenProvider struct {
 	clientID     string
 	clientSecret string
 	deploymentID string
-	scope        string
 	tokenURL     string
 	httpClient   *http.Client
 
@@ -304,7 +301,6 @@ type tokenProviderConfig struct {
 	ClientID     string
 	ClientSecret string
 	DeploymentID string
-	Scope        string
 	HTTPClient   *http.Client
 }
 
@@ -316,7 +312,6 @@ func newTokenProvider(cfg tokenProviderConfig) (*tokenProvider, error) {
 		clientID:     cfg.ClientID,
 		clientSecret: cfg.ClientSecret,
 		deploymentID: cfg.DeploymentID,
-		scope:        cfg.Scope,
 		tokenURL:     cfg.TokenURL,
 		httpClient:   cfg.HTTPClient,
 	}, nil
@@ -348,9 +343,6 @@ func (p *tokenProvider) Token(ctx context.Context) (string, error) {
 	form := url.Values{}
 	form.Set("grant_type", "client_credentials")
 	form.Set("deployment_id", p.deploymentID)
-	if strings.TrimSpace(p.scope) != "" {
-		form.Set("scope", p.scope)
-	}
 
 	if err := p.obtainToken(ctx, form); err != nil {
 		if combinedErr != nil {

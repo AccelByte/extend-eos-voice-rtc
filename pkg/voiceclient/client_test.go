@@ -71,7 +71,6 @@ func TestCreateRoomTokensAndRemoval(t *testing.T) {
 		TokenURL:     tokenSrv.URL,
 		ClientID:     "id",
 		ClientSecret: "secret",
-		Scope:        "scope",
 		HTTPClient:   &http.Client{Timeout: time.Second},
 	}
 
@@ -97,54 +96,6 @@ func TestCreateRoomTokensAndRemoval(t *testing.T) {
 
 	if atomic.LoadInt32(&tokenRequests) != 1 {
 		t.Fatalf("token endpoint called unexpected times: %d", tokenRequests)
-	}
-}
-
-func TestTokenProviderRespectsScope(t *testing.T) {
-	tokenCh := make(chan url.Values, 1)
-	tokenSrv := newHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseForm(); err != nil {
-			t.Fatalf("parse form: %v", err)
-		}
-		tokenCh <- r.Form
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"access_token": "token",
-			"expires_in":   1,
-		})
-	}))
-	defer tokenSrv.Close()
-
-	cfg := Config{
-		BaseURL:      "http://example",
-		DeploymentID: "dep",
-		TokenURL:     tokenSrv.URL,
-		ClientID:     "id",
-		ClientSecret: "secret",
-		Scope:        "a b",
-		HTTPClient:   &http.Client{Timeout: time.Second},
-	}
-
-	client, err := New(cfg)
-	if err != nil {
-		t.Fatalf("unexpected error constructing client: %v", err)
-	}
-
-	// Use token provider directly
-	tok, err := client.tokens.Token(context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if tok != "token" {
-		t.Fatalf("unexpected token %q", tok)
-	}
-
-	select {
-	case form := <-tokenCh:
-		if got := form.Get("scope"); got != "a b" {
-			t.Fatalf("unexpected scope %q", got)
-		}
-	case <-time.After(time.Second):
-		t.Fatal("token request not captured")
 	}
 }
 

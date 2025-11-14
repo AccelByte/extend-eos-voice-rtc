@@ -22,6 +22,8 @@ import (
 const (
 	externalAccountBatchSize = 16
 	identityProviderOpenID   = "openid"
+	notificationTypeGame     = "game-session"
+	notificationTypeParty    = "party-session"
 )
 
 var (
@@ -98,7 +100,7 @@ func (p *VoiceEventProcessor) HandleGameSessionCreated(ctx context.Context, sess
 		return nil
 	}
 	for roomID, members := range roomMembers {
-		if err := p.createParticipants(ctx, sessionID, roomID, members, true); err != nil {
+		if err := p.createParticipants(ctx, sessionID, roomID, members, notificationTypeGame); err != nil {
 			p.logger.WithError(err).WithFields(logrus.Fields{
 				"sessionId": sessionID,
 				"roomId":    roomID,
@@ -160,7 +162,7 @@ func (p *VoiceEventProcessor) HandlePartyCreated(ctx context.Context, partyID st
 	}
 
 	roomID := partyVoiceRoomID(partyID)
-	if err := p.createParticipants(ctx, partyID, roomID, userIDs, false); err != nil {
+	if err := p.createParticipants(ctx, partyID, roomID, userIDs, notificationTypeParty); err != nil {
 		return fmt.Errorf("handle party created: create participants: %w", err)
 	}
 	p.logger.WithFields(logrus.Fields{
@@ -178,7 +180,7 @@ func (p *VoiceEventProcessor) HandlePartyMembersJoined(ctx context.Context, part
 	}
 
 	roomID := partyVoiceRoomID(partyID)
-	return p.createParticipants(ctx, partyID, roomID, userIDs, false)
+	return p.createParticipants(ctx, partyID, roomID, userIDs, notificationTypeParty)
 }
 
 // HandlePartyMembersRemoved revokes party tokens for the provided members.
@@ -190,9 +192,13 @@ func (p *VoiceEventProcessor) HandlePartyMembersRemoved(ctx context.Context, par
 	return p.removeParticipants(ctx, partyID, roomID, userIDs)
 }
 
-func (p *VoiceEventProcessor) createParticipants(ctx context.Context, sessionID, roomID string, userIDs []string, includeTeam bool) error {
+func (p *VoiceEventProcessor) createParticipants(ctx context.Context, sessionID, roomID string, userIDs []string, notificationType string) error {
 	if len(userIDs) == 0 {
 		return nil
+	}
+
+	if notificationType == "" {
+		notificationType = notificationTypeGame
 	}
 
 	eosMap, err := p.fetchEOSIDs(ctx, userIDs)
@@ -237,15 +243,13 @@ func (p *VoiceEventProcessor) createParticipants(ctx context.Context, sessionID,
 			continue
 		}
 		notification := map[string]string{
-			"type":          "game-session",
+			"type":          notificationType,
 			"sessionId":     sessionID,
 			"roomId":        resp.RoomID,
 			"clientBaseUrl": resp.ClientBaseURL,
 			"token":         participant.Token,
 		}
-		if !includeTeam {
-			notification["type"] = "party"
-		} else {
+		if notificationType == notificationTypeGame {
 			if parts := strings.SplitN(resp.RoomID, ":", 2); len(parts) == 2 {
 				notification["teamId"] = parts[1]
 			}

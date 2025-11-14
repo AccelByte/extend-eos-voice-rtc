@@ -2025,3 +2025,367 @@ var Mpv2SessionHistoryPartyMembersChangedEventService_ServiceDesc = grpc.Service
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "accelbyte-asyncapi/session/session/v1/session.proto",
 }
+
+const (
+	Mpv2SessionHistoryMetricTotalActiveSessionEventService_OnMessage_FullMethodName = "/accelbyte.session.session.v1.Mpv2SessionHistoryMetricTotalActiveSessionEventService/OnMessage"
+)
+
+// Mpv2SessionHistoryMetricTotalActiveSessionEventServiceClient is the client API for Mpv2SessionHistoryMetricTotalActiveSessionEventService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type Mpv2SessionHistoryMetricTotalActiveSessionEventServiceClient interface {
+	OnMessage(ctx context.Context, in *MetricTotalActiveSessionEvent, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type mpv2SessionHistoryMetricTotalActiveSessionEventServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMpv2SessionHistoryMetricTotalActiveSessionEventServiceClient(cc grpc.ClientConnInterface) Mpv2SessionHistoryMetricTotalActiveSessionEventServiceClient {
+	return &mpv2SessionHistoryMetricTotalActiveSessionEventServiceClient{cc}
+}
+
+func (c *mpv2SessionHistoryMetricTotalActiveSessionEventServiceClient) OnMessage(ctx context.Context, in *MetricTotalActiveSessionEvent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Mpv2SessionHistoryMetricTotalActiveSessionEventService_OnMessage_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Mpv2SessionHistoryMetricTotalActiveSessionEventServiceServer is the server API for Mpv2SessionHistoryMetricTotalActiveSessionEventService service.
+// All implementations must embed UnimplementedMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer
+// for forward compatibility
+type Mpv2SessionHistoryMetricTotalActiveSessionEventServiceServer interface {
+	OnMessage(context.Context, *MetricTotalActiveSessionEvent) (*emptypb.Empty, error)
+	mustEmbedUnimplementedMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer()
+}
+
+// UnimplementedMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer struct {
+}
+
+func (UnimplementedMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer) OnMessage(context.Context, *MetricTotalActiveSessionEvent) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OnMessage not implemented")
+}
+func (UnimplementedMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer) mustEmbedUnimplementedMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer() {
+}
+
+// UnsafeMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to Mpv2SessionHistoryMetricTotalActiveSessionEventServiceServer will
+// result in compilation errors.
+type UnsafeMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer interface {
+	mustEmbedUnimplementedMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer()
+}
+
+func RegisterMpv2SessionHistoryMetricTotalActiveSessionEventServiceServer(s grpc.ServiceRegistrar, srv Mpv2SessionHistoryMetricTotalActiveSessionEventServiceServer) {
+	s.RegisterService(&Mpv2SessionHistoryMetricTotalActiveSessionEventService_ServiceDesc, srv)
+}
+
+func _Mpv2SessionHistoryMetricTotalActiveSessionEventService_OnMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MetricTotalActiveSessionEvent)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(Mpv2SessionHistoryMetricTotalActiveSessionEventServiceServer).OnMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Mpv2SessionHistoryMetricTotalActiveSessionEventService_OnMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(Mpv2SessionHistoryMetricTotalActiveSessionEventServiceServer).OnMessage(ctx, req.(*MetricTotalActiveSessionEvent))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Mpv2SessionHistoryMetricTotalActiveSessionEventService_ServiceDesc is the grpc.ServiceDesc for Mpv2SessionHistoryMetricTotalActiveSessionEventService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Mpv2SessionHistoryMetricTotalActiveSessionEventService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "accelbyte.session.session.v1.Mpv2SessionHistoryMetricTotalActiveSessionEventService",
+	HandlerType: (*Mpv2SessionHistoryMetricTotalActiveSessionEventServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "OnMessage",
+			Handler:    _Mpv2SessionHistoryMetricTotalActiveSessionEventService_OnMessage_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "accelbyte-asyncapi/session/session/v1/session.proto",
+}
+
+const (
+	Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService_OnMessage_FullMethodName = "/accelbyte.session.session.v1.Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService/OnMessage"
+)
+
+// Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceClient is the client API for Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceClient interface {
+	OnMessage(ctx context.Context, in *MetricAcquiringDsWaitTimeEvent, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceClient(cc grpc.ClientConnInterface) Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceClient {
+	return &mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceClient{cc}
+}
+
+func (c *mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceClient) OnMessage(ctx context.Context, in *MetricAcquiringDsWaitTimeEvent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService_OnMessage_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer is the server API for Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService service.
+// All implementations must embed UnimplementedMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer
+// for forward compatibility
+type Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer interface {
+	OnMessage(context.Context, *MetricAcquiringDsWaitTimeEvent) (*emptypb.Empty, error)
+	mustEmbedUnimplementedMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer()
+}
+
+// UnimplementedMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer struct {
+}
+
+func (UnimplementedMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer) OnMessage(context.Context, *MetricAcquiringDsWaitTimeEvent) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OnMessage not implemented")
+}
+func (UnimplementedMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer) mustEmbedUnimplementedMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer() {
+}
+
+// UnsafeMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer will
+// result in compilation errors.
+type UnsafeMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer interface {
+	mustEmbedUnimplementedMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer()
+}
+
+func RegisterMpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer(s grpc.ServiceRegistrar, srv Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer) {
+	s.RegisterService(&Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService_ServiceDesc, srv)
+}
+
+func _Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService_OnMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MetricAcquiringDsWaitTimeEvent)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer).OnMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService_OnMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer).OnMessage(ctx, req.(*MetricAcquiringDsWaitTimeEvent))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService_ServiceDesc is the grpc.ServiceDesc for Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "accelbyte.session.session.v1.Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService",
+	HandlerType: (*Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "OnMessage",
+			Handler:    _Mpv2SessionHistoryMetricAcquiringDsWaitTimeEventService_OnMessage_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "accelbyte-asyncapi/session/session/v1/session.proto",
+}
+
+const (
+	Mpv2SessionHistoryMetricAcquiringDsEventService_OnMessage_FullMethodName = "/accelbyte.session.session.v1.Mpv2SessionHistoryMetricAcquiringDsEventService/OnMessage"
+)
+
+// Mpv2SessionHistoryMetricAcquiringDsEventServiceClient is the client API for Mpv2SessionHistoryMetricAcquiringDsEventService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type Mpv2SessionHistoryMetricAcquiringDsEventServiceClient interface {
+	OnMessage(ctx context.Context, in *MetricAcquiringDsEvent, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type mpv2SessionHistoryMetricAcquiringDsEventServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMpv2SessionHistoryMetricAcquiringDsEventServiceClient(cc grpc.ClientConnInterface) Mpv2SessionHistoryMetricAcquiringDsEventServiceClient {
+	return &mpv2SessionHistoryMetricAcquiringDsEventServiceClient{cc}
+}
+
+func (c *mpv2SessionHistoryMetricAcquiringDsEventServiceClient) OnMessage(ctx context.Context, in *MetricAcquiringDsEvent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Mpv2SessionHistoryMetricAcquiringDsEventService_OnMessage_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Mpv2SessionHistoryMetricAcquiringDsEventServiceServer is the server API for Mpv2SessionHistoryMetricAcquiringDsEventService service.
+// All implementations must embed UnimplementedMpv2SessionHistoryMetricAcquiringDsEventServiceServer
+// for forward compatibility
+type Mpv2SessionHistoryMetricAcquiringDsEventServiceServer interface {
+	OnMessage(context.Context, *MetricAcquiringDsEvent) (*emptypb.Empty, error)
+	mustEmbedUnimplementedMpv2SessionHistoryMetricAcquiringDsEventServiceServer()
+}
+
+// UnimplementedMpv2SessionHistoryMetricAcquiringDsEventServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedMpv2SessionHistoryMetricAcquiringDsEventServiceServer struct {
+}
+
+func (UnimplementedMpv2SessionHistoryMetricAcquiringDsEventServiceServer) OnMessage(context.Context, *MetricAcquiringDsEvent) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OnMessage not implemented")
+}
+func (UnimplementedMpv2SessionHistoryMetricAcquiringDsEventServiceServer) mustEmbedUnimplementedMpv2SessionHistoryMetricAcquiringDsEventServiceServer() {
+}
+
+// UnsafeMpv2SessionHistoryMetricAcquiringDsEventServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to Mpv2SessionHistoryMetricAcquiringDsEventServiceServer will
+// result in compilation errors.
+type UnsafeMpv2SessionHistoryMetricAcquiringDsEventServiceServer interface {
+	mustEmbedUnimplementedMpv2SessionHistoryMetricAcquiringDsEventServiceServer()
+}
+
+func RegisterMpv2SessionHistoryMetricAcquiringDsEventServiceServer(s grpc.ServiceRegistrar, srv Mpv2SessionHistoryMetricAcquiringDsEventServiceServer) {
+	s.RegisterService(&Mpv2SessionHistoryMetricAcquiringDsEventService_ServiceDesc, srv)
+}
+
+func _Mpv2SessionHistoryMetricAcquiringDsEventService_OnMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MetricAcquiringDsEvent)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(Mpv2SessionHistoryMetricAcquiringDsEventServiceServer).OnMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Mpv2SessionHistoryMetricAcquiringDsEventService_OnMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(Mpv2SessionHistoryMetricAcquiringDsEventServiceServer).OnMessage(ctx, req.(*MetricAcquiringDsEvent))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Mpv2SessionHistoryMetricAcquiringDsEventService_ServiceDesc is the grpc.ServiceDesc for Mpv2SessionHistoryMetricAcquiringDsEventService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Mpv2SessionHistoryMetricAcquiringDsEventService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "accelbyte.session.session.v1.Mpv2SessionHistoryMetricAcquiringDsEventService",
+	HandlerType: (*Mpv2SessionHistoryMetricAcquiringDsEventServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "OnMessage",
+			Handler:    _Mpv2SessionHistoryMetricAcquiringDsEventService_OnMessage_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "accelbyte-asyncapi/session/session/v1/session.proto",
+}
+
+const (
+	Mpv2SessionHistoryMetricMatchLengthDurationEventService_OnMessage_FullMethodName = "/accelbyte.session.session.v1.Mpv2SessionHistoryMetricMatchLengthDurationEventService/OnMessage"
+)
+
+// Mpv2SessionHistoryMetricMatchLengthDurationEventServiceClient is the client API for Mpv2SessionHistoryMetricMatchLengthDurationEventService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type Mpv2SessionHistoryMetricMatchLengthDurationEventServiceClient interface {
+	OnMessage(ctx context.Context, in *MetricMatchLengthDurationEvent, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type mpv2SessionHistoryMetricMatchLengthDurationEventServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMpv2SessionHistoryMetricMatchLengthDurationEventServiceClient(cc grpc.ClientConnInterface) Mpv2SessionHistoryMetricMatchLengthDurationEventServiceClient {
+	return &mpv2SessionHistoryMetricMatchLengthDurationEventServiceClient{cc}
+}
+
+func (c *mpv2SessionHistoryMetricMatchLengthDurationEventServiceClient) OnMessage(ctx context.Context, in *MetricMatchLengthDurationEvent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Mpv2SessionHistoryMetricMatchLengthDurationEventService_OnMessage_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Mpv2SessionHistoryMetricMatchLengthDurationEventServiceServer is the server API for Mpv2SessionHistoryMetricMatchLengthDurationEventService service.
+// All implementations must embed UnimplementedMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer
+// for forward compatibility
+type Mpv2SessionHistoryMetricMatchLengthDurationEventServiceServer interface {
+	OnMessage(context.Context, *MetricMatchLengthDurationEvent) (*emptypb.Empty, error)
+	mustEmbedUnimplementedMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer()
+}
+
+// UnimplementedMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer struct {
+}
+
+func (UnimplementedMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer) OnMessage(context.Context, *MetricMatchLengthDurationEvent) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OnMessage not implemented")
+}
+func (UnimplementedMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer) mustEmbedUnimplementedMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer() {
+}
+
+// UnsafeMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to Mpv2SessionHistoryMetricMatchLengthDurationEventServiceServer will
+// result in compilation errors.
+type UnsafeMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer interface {
+	mustEmbedUnimplementedMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer()
+}
+
+func RegisterMpv2SessionHistoryMetricMatchLengthDurationEventServiceServer(s grpc.ServiceRegistrar, srv Mpv2SessionHistoryMetricMatchLengthDurationEventServiceServer) {
+	s.RegisterService(&Mpv2SessionHistoryMetricMatchLengthDurationEventService_ServiceDesc, srv)
+}
+
+func _Mpv2SessionHistoryMetricMatchLengthDurationEventService_OnMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MetricMatchLengthDurationEvent)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(Mpv2SessionHistoryMetricMatchLengthDurationEventServiceServer).OnMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Mpv2SessionHistoryMetricMatchLengthDurationEventService_OnMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(Mpv2SessionHistoryMetricMatchLengthDurationEventServiceServer).OnMessage(ctx, req.(*MetricMatchLengthDurationEvent))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Mpv2SessionHistoryMetricMatchLengthDurationEventService_ServiceDesc is the grpc.ServiceDesc for Mpv2SessionHistoryMetricMatchLengthDurationEventService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Mpv2SessionHistoryMetricMatchLengthDurationEventService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "accelbyte.session.session.v1.Mpv2SessionHistoryMetricMatchLengthDurationEventService",
+	HandlerType: (*Mpv2SessionHistoryMetricMatchLengthDurationEventServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "OnMessage",
+			Handler:    _Mpv2SessionHistoryMetricMatchLengthDurationEventService_OnMessage_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "accelbyte-asyncapi/session/session/v1/session.proto",
+}

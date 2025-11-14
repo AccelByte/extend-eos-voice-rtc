@@ -7,29 +7,33 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
+)
+
+const (
+	integrationBaseURL  = "https://api.epicgames.dev"
+	integrationTokenURL = "	https://api.epicgames.dev/auth/v1/oauth/token"
 )
 
 // TestCreateRoomTokensAgainstEOS performs a live request against the EOS Voice API.
 //
 // The test is gated behind the `integration` build tag and requires the following
 // environment variables to be set with valid credentials:
-//   - EOS_IT_BASE_URL            (e.g. https://api.epicgames.dev/rtc/)
-//   - EOS_IT_TOKEN_URL           (e.g. https://api.epicgames.dev/epic/oauth/v2/token)
 //   - EOS_IT_DEPLOYMENT_ID       (deployment identifier for your title)
 //   - EOS_IT_CLIENT_ID           (OAuth client ID)
 //   - EOS_IT_CLIENT_SECRET       (OAuth client secret)
-//   - EOS_IT_SCOPE               (optional, defaults to "basic_profile friends_list presence")
 //   - EOS_IT_ROOM_ID             (room identifier the title is allowed to create/update)
 //   - EOS_IT_PRODUCT_USER_ID     (EOS Product User ID that should receive the room token)
+//
+// The EOS Voice and token endpoints default to the production values but can be
+// overridden via `EOS_IT_BASE_URL` and `EOS_IT_TOKEN_URL`
 //
 // When any variable is missing the test is skipped. Because the call mutates live
 // voice state, point the parameters at an isolated deployment or disposable room.
 func TestCreateRoomTokensAgainstEOS(t *testing.T) {
 	required := []string{
-		"EOS_IT_BASE_URL",
-		"EOS_IT_TOKEN_URL",
 		"EOS_IT_DEPLOYMENT_ID",
 		"EOS_IT_CLIENT_ID",
 		"EOS_IT_CLIENT_SECRET",
@@ -45,12 +49,11 @@ func TestCreateRoomTokensAgainstEOS(t *testing.T) {
 	}
 
 	cfg := Config{
-		BaseURL:      os.Getenv("EOS_IT_BASE_URL"),
+		BaseURL:      envOrDefault("EOS_IT_BASE_URL", integrationBaseURL),
 		DeploymentID: os.Getenv("EOS_IT_DEPLOYMENT_ID"),
-		TokenURL:     os.Getenv("EOS_IT_TOKEN_URL"),
+		TokenURL:     envOrDefault("EOS_IT_TOKEN_URL", integrationTokenURL),
 		ClientID:     os.Getenv("EOS_IT_CLIENT_ID"),
 		ClientSecret: os.Getenv("EOS_IT_CLIENT_SECRET"),
-		Scope:        os.Getenv("EOS_IT_SCOPE"),
 		HTTPClient:   &http.Client{Timeout: 10 * time.Second},
 	}
 
@@ -112,7 +115,6 @@ func TestCreateRoomTokensAgainstEOS(t *testing.T) {
 
 func TestObtainAccessTokenAgainstEOS(t *testing.T) {
 	required := []string{
-		"EOS_IT_TOKEN_URL",
 		"EOS_IT_DEPLOYMENT_ID",
 		"EOS_IT_CLIENT_ID",
 		"EOS_IT_CLIENT_SECRET",
@@ -125,12 +127,11 @@ func TestObtainAccessTokenAgainstEOS(t *testing.T) {
 	}
 
 	cfg := Config{
-		BaseURL:      os.Getenv("EOS_IT_BASE_URL"),
+		BaseURL:      envOrDefault("EOS_IT_BASE_URL", integrationBaseURL),
 		DeploymentID: os.Getenv("EOS_IT_DEPLOYMENT_ID"),
-		TokenURL:     os.Getenv("EOS_IT_TOKEN_URL"),
+		TokenURL:     envOrDefault("EOS_IT_TOKEN_URL", integrationTokenURL),
 		ClientID:     os.Getenv("EOS_IT_CLIENT_ID"),
 		ClientSecret: os.Getenv("EOS_IT_CLIENT_SECRET"),
-		Scope:        os.Getenv("EOS_IT_SCOPE"),
 		HTTPClient:   &http.Client{Timeout: 10 * time.Second},
 	}
 
@@ -151,4 +152,11 @@ func TestObtainAccessTokenAgainstEOS(t *testing.T) {
 	}
 
 	fmt.Printf("[integration] Voice token (len=%d): %s\n", len(tok), tok)
+}
+
+func envOrDefault(key, fallback string) string {
+	if val := os.Getenv(key); strings.TrimSpace(val) != "" {
+		return strings.TrimSpace(val)
+	}
+	return strings.TrimSpace(fallback)
 }
