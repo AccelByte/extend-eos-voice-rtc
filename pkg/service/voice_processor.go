@@ -12,8 +12,6 @@ import (
 
 	lobbyNotification "github.com/AccelByte/accelbyte-go-sdk/lobby-sdk/pkg/lobbyclient/notification"
 	lobbyModels "github.com/AccelByte/accelbyte-go-sdk/lobby-sdk/pkg/lobbyclientmodels"
-	lobby "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/lobby"
-	sessionservice "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/session"
 	sessionGame "github.com/AccelByte/accelbyte-go-sdk/session-sdk/pkg/sessionclient/game_session"
 	sessionModels "github.com/AccelByte/accelbyte-go-sdk/session-sdk/pkg/sessionclientmodels"
 	"github.com/sirupsen/logrus"
@@ -30,21 +28,37 @@ var (
 	errGameSessionNotFound = errors.New("game session not found")
 )
 
-type voiceOrchestrator interface {
-	HandleGameSessionCreated(ctx context.Context, sessionID string, snapshot string) error
-	HandleGameSessionEnded(ctx context.Context, sessionID string) error
-	HandlePartyCreated(ctx context.Context, partyID string, userIDs []string) error
-	HandlePartyMembersJoined(ctx context.Context, partyID string, userIDs []string) error
-	HandlePartyMembersRemoved(ctx context.Context, partyID string, userIDs []string) error
-}
+type (
+	voiceOrchestrator interface {
+		HandleGameSessionCreated(ctx context.Context, sessionID string, snapshot string) error
+		HandleGameSessionEnded(ctx context.Context, sessionID string) error
+		HandlePartyCreated(ctx context.Context, partyID string, userIDs []string) error
+		HandlePartyMembersJoined(ctx context.Context, partyID string, userIDs []string) error
+		HandlePartyMembersRemoved(ctx context.Context, partyID string, userIDs []string) error
+	}
+
+	voiceRoomClient interface {
+		CreateRoomTokens(ctx context.Context, roomID string, participants []voiceclient.Participant) (*voiceclient.CreateRoomTokenResponse, error)
+		RemoveParticipant(ctx context.Context, roomID, productUserID string) error
+		QueryExternalAccounts(ctx context.Context, identityProviderID string, accountIDs []string) (map[string]string, error)
+	}
+
+	lobbyNotifier interface {
+		SendSpecificUserFreeformNotificationV1AdminShort(params *lobbyNotification.SendSpecificUserFreeformNotificationV1AdminParams) error
+	}
+
+	gameSessionFetcher interface {
+		GetGameSessionShort(params *sessionGame.GetGameSessionParams) (*sessionModels.ApimodelsGameSessionResponse, error)
+	}
+)
 
 // VoiceEventProcessor orchestrates EOS voice rooms based on session events.
 type VoiceEventProcessor struct {
 	namespace           string
 	topicName           string
-	voiceClient         *voiceclient.Client
-	gameSessionService  sessionservice.GameSessionService
-	notificationService lobby.NotificationService
+	voiceClient         voiceRoomClient
+	gameSessionService  gameSessionFetcher
+	notificationService lobbyNotifier
 	logger              *logrus.Entry
 }
 
@@ -54,9 +68,9 @@ var _ voiceOrchestrator = (*VoiceEventProcessor)(nil)
 type VoiceProcessorConfig struct {
 	Namespace           string
 	NotificationTopic   string
-	VoiceClient         *voiceclient.Client
-	GameSessionService  sessionservice.GameSessionService
-	NotificationService lobby.NotificationService
+	VoiceClient         voiceRoomClient
+	GameSessionService  gameSessionFetcher
+	NotificationService lobbyNotifier
 	Logger              *logrus.Entry
 }
 
@@ -64,6 +78,12 @@ type VoiceProcessorConfig struct {
 func NewVoiceEventProcessor(cfg VoiceProcessorConfig) (*VoiceEventProcessor, error) {
 	if cfg.VoiceClient == nil {
 		return nil, errors.New("voice processor: voice client is required")
+	}
+	if cfg.NotificationService == nil {
+		return nil, errors.New("voice processor: notification service is required")
+	}
+	if cfg.GameSessionService == nil {
+		return nil, errors.New("voice processor: game session service is required")
 	}
 	logger := cfg.Logger
 	if logger == nil {

@@ -159,8 +159,8 @@ func main() {
 		Namespace:           absNamespace,
 		NotificationTopic:   voiceTopic,
 		VoiceClient:         voiceHTTPClient,
-		GameSessionService:  gameSessionService,
-		NotificationService: notificationService,
+		GameSessionService:  &gameSessionService,
+		NotificationService: &notificationService,
 		Logger:              logrusLogger.WithField("component", "voice"),
 	})
 	if err != nil {

@@ -121,11 +121,25 @@ Automated tests use Go's standard tooling and can run without the Docker stack o
   Pass extra `go test` flags after `--`, for example `./scripts/run-tests-with-docker.sh -- -race`.
 - Live EOS integration: set the environment variables described in `pkg/voiceclient/client_integration_test.go` (prefixed `EOS_IT_...`) and run `go test -tags=integration ./pkg/voiceclient` to hit the real API. The test skips automatically when any secret is missing.
 
+## Load Testing & Profiling
+
+Use the dedicated load-test harness to stress the voice processor locally without standing up Kafka or EOS:
+
+```bash
+go run ./cmd/loadtest -requests 20000 -workers 16 -participants 12 -cpuprofile cpu.out -memprofile mem.out
+
+# emulate ~1 vCPU / 512MiB pod using Docker or systemd-run
+scripts/run-loadtest.sh -requests 20000 -workers 16 -participants 12
+```
+
+The command fans out synthetic `GameSessionCreated` events across the specified workers and can emit CPU/heap profiles for analysis (`go tool pprof cpu.out`). See `docs/loadtest.md` for more options and guidance.
+
 ## Development Notes
 
 - `make proto` updates the generated gRPC bindings if you touch files under `pkg/proto`.
 - The service expects Kafka Connect to deliver session and party events; when running in Docker Compose the handler starts but no events flow without that upstream integration.
 - The handler is stateless: `GameSessionCreated` mints tokens for every active player, `GameSessionEnded` revokes them, and party membership is driven solely by `PartyCreated`, `PartyJoined`, `PartyLeave`, and `PartyKicked` events (members-changed events are ignored).
+- Game session backfill events are not supported—room token issuance and revocation only occur during `GameSessionCreated` and `GameSessionEnded`, so late entrants from backfill must rely on a fresh session create event instead of incremental updates.
 - Use `LOG_LEVEL=debug` to increase logging verbosity while diagnosing room synchronisation.
 
 ## Troubleshooting
