@@ -22,7 +22,6 @@ import (
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/factory"
 	"github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/iam"
 	lobbysvc "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/lobby"
-	sessionsvc "github.com/AccelByte/accelbyte-go-sdk/services-api/pkg/service/session"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -126,6 +125,10 @@ func main() {
 	voiceClientID := common.GetEnv("EOS_VOICE_CLIENT_ID", "")
 	voiceClientSecret := common.GetEnv("EOS_VOICE_CLIENT_SECRET", "")
 	voiceTopic := common.GetEnv("EOS_VOICE_NOTIFICATION_TOPIC", "EOS_VOICE")
+	enablePartyVoice := common.GetEnvBool("ENABLE_PARTY_VOICE", true)
+	enableTeamVoice := common.GetEnvBool("ENABLE_TEAM_VOICE", true)
+	enableGameVoice := common.GetEnvBool("ENABLE_GAME_VOICE", false)
+	anyGameVoice := enableTeamVoice || enableGameVoice
 	if voiceDeploymentID == "" {
 		logrus.Fatal("EOS_VOICE_DEPLOYMENT_ID environment variable is required")
 	}
@@ -143,40 +146,60 @@ func main() {
 		logrus.Fatalf("failed to configure EOS voice client: %v", err)
 	}
 
-	sessionClient := factory.NewSessionClient(configRepo)
-	gameSessionService := sessionsvc.GameSessionService{
-		Client:           sessionClient,
-		ConfigRepository: configRepo,
-		TokenRepository:  tokenRepo,
-	}
 	notificationService := lobbysvc.NotificationService{
 		Client:           factory.NewLobbyClient(configRepo),
 		ConfigRepository: configRepo,
 		TokenRepository:  tokenRepo,
 	}
 
+	voiceLogger := logrusLogger.WithField("component", "voice")
 	voiceProcessor, err := service.NewVoiceEventProcessor(service.VoiceProcessorConfig{
 		Namespace:           absNamespace,
 		NotificationTopic:   voiceTopic,
 		VoiceClient:         voiceHTTPClient,
-		GameSessionService:  &gameSessionService,
 		NotificationService: &notificationService,
-		Logger:              logrusLogger.WithField("component", "voice"),
+		Logger:              voiceLogger,
+		EnableTeamVoice:     enableTeamVoice,
+		EnableGameVoice:     enableGameVoice,
 	})
 	if err != nil {
 		logrus.Fatalf("failed to initialize voice processor: %v", err)
 	}
 
-	sessionpb.RegisterMpv2SessionHistoryGameSessionCreatedEventServiceServer(s, service.NewGameSessionCreatedServer(voiceProcessor))
-	sessionpb.RegisterMpv2SessionHistoryGameSessionJoinedEventServiceServer(s, service.NewGameSessionJoinedServer(voiceProcessor))
-	sessionpb.RegisterMpv2SessionHistoryGameSessionMembersChangedEventServiceServer(s, service.NewGameSessionMembersChangedServer(voiceProcessor))
-	sessionpb.RegisterMpv2SessionHistoryGameSessionKickedEventServiceServer(s, service.NewGameSessionKickedServer(voiceProcessor))
-	sessionpb.RegisterMpv2SessionHistoryGameSessionEndedEventServiceServer(s, service.NewGameSessionEndedServer(voiceProcessor))
-	sessionpb.RegisterMpv2SessionHistoryPartyCreatedEventServiceServer(s, service.NewPartyCreatedServer(voiceProcessor))
-	sessionpb.RegisterMpv2SessionHistoryPartyJoinedEventServiceServer(s, service.NewPartyJoinedServer(voiceProcessor))
-	sessionpb.RegisterMpv2SessionHistoryPartyMembersChangedEventServiceServer(s, service.NewPartyMembersChangedServer(voiceProcessor))
-	sessionpb.RegisterMpv2SessionHistoryPartyLeaveEventServiceServer(s, service.NewPartyLeaveServer(voiceProcessor))
-	sessionpb.RegisterMpv2SessionHistoryPartyKickedEventServiceServer(s, service.NewPartyKickedServer(voiceProcessor))
+	if anyGameVoice {
+		sessionpb.RegisterMpv2SessionHistoryGameSessionCreatedEventServiceServer(s, service.NewGameSessionCreatedServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryGameSessionJoinedEventServiceServer(s, service.NewGameSessionJoinedServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryGameSessionMembersChangedEventServiceServer(s, service.NewGameSessionMembersChangedServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryGameSessionKickedEventServiceServer(s, service.NewGameSessionKickedServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryGameSessionEndedEventServiceServer(s, service.NewGameSessionEndedServer(voiceProcessor, voiceLogger))
+		if enableTeamVoice {
+			logrusLogger.Info("team-based game session events enabled")
+		} else {
+			logrusLogger.Warn("team-based game session events disabled")
+		}
+		if enableGameVoice {
+			logrusLogger.Info("session-wide game session events enabled")
+		} else {
+			logrusLogger.Warn("session-wide game session events disabled")
+		}
+	} else {
+		logrusLogger.Warn("game session events disabled")
+	}
+	if enablePartyVoice {
+		sessionpb.RegisterMpv2SessionHistoryPartyCreatedEventServiceServer(s, service.NewPartyCreatedServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryPartyJoinedEventServiceServer(s, service.NewPartyJoinedServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryPartyMembersChangedEventServiceServer(s, service.NewPartyMembersChangedServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryPartyLeaveEventServiceServer(s, service.NewPartyLeaveServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryPartyKickedEventServiceServer(s, service.NewPartyKickedServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryPartyDeletedEventServiceServer(s, service.NewPartyDeletedServer(voiceProcessor, voiceLogger))
+		sessionpb.RegisterMpv2SessionHistoryPartyRejoinedEventServiceServer(s, service.NewPartyRejoinedServer(voiceProcessor, voiceLogger))
+		logrusLogger.Info("party events enabled")
+	} else {
+		logrusLogger.Warn("party events disabled")
+	}
+	if !enablePartyVoice && !anyGameVoice {
+		logrusLogger.Warn("ENABLE_PARTY_VOICE, ENABLE_TEAM_VOICE, and ENABLE_GAME_VOICE are all false; no events will be processed")
+	}
 
 	// Enable gRPC Reflection
 	reflection.Register(s)
@@ -249,3 +272,5 @@ func main() {
 	<-ctx.Done()
 	logrus.Infof("signal received")
 }
+
+// no extra helpers required beyond boolean env toggles

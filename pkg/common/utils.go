@@ -30,6 +30,18 @@ func GetEnvInt(key string, fallback int) int {
 	return val
 }
 
+func GetEnvBool(key string, fallback bool) bool {
+	value := strings.TrimSpace(strings.ToLower(GetEnv(key, strconv.FormatBool(fallback))))
+	switch value {
+	case "1", "true", "yes", "y", "on":
+		return true
+	case "0", "false", "no", "n", "off":
+		return false
+	default:
+		return fallback
+	}
+}
+
 // GenerateRandomInt generate a random int that is not determined
 func GenerateRandomInt() int {
 	source := rand.NewSource(time.Now().UnixNano())

@@ -12,27 +12,22 @@ import (
 
 	lobbyNotification "github.com/AccelByte/accelbyte-go-sdk/lobby-sdk/pkg/lobbyclient/notification"
 	lobbyModels "github.com/AccelByte/accelbyte-go-sdk/lobby-sdk/pkg/lobbyclientmodels"
-	sessionGame "github.com/AccelByte/accelbyte-go-sdk/session-sdk/pkg/sessionclient/game_session"
-	sessionModels "github.com/AccelByte/accelbyte-go-sdk/session-sdk/pkg/sessionclientmodels"
 	"github.com/sirupsen/logrus"
 )
 
 const (
 	externalAccountBatchSize = 16
 	identityProviderOpenID   = "openid"
+	notificationTypeTeam     = "team-session"
 	notificationTypeGame     = "game-session"
 	notificationTypeParty    = "party-session"
-)
-
-var (
-	errGameSessionNotFound = errors.New("game session not found")
 )
 
 type (
 	voiceOrchestrator interface {
 		HandleGameSessionCreated(ctx context.Context, sessionID string, snapshot string) error
-		HandleGameSessionEnded(ctx context.Context, sessionID string) error
-		HandlePartyCreated(ctx context.Context, partyID string, userIDs []string) error
+		HandleGameSessionEnded(ctx context.Context, sessionID string, snapshot string) error
+		HandlePartyCreated(ctx context.Context, partyID string, snapshot string, userIDs []string) error
 		HandlePartyMembersJoined(ctx context.Context, partyID string, userIDs []string) error
 		HandlePartyMembersRemoved(ctx context.Context, partyID string, userIDs []string) error
 	}
@@ -46,10 +41,6 @@ type (
 	lobbyNotifier interface {
 		SendSpecificUserFreeformNotificationV1AdminShort(params *lobbyNotification.SendSpecificUserFreeformNotificationV1AdminParams) error
 	}
-
-	gameSessionFetcher interface {
-		GetGameSessionShort(params *sessionGame.GetGameSessionParams) (*sessionModels.ApimodelsGameSessionResponse, error)
-	}
 )
 
 // VoiceEventProcessor orchestrates EOS voice rooms based on session events.
@@ -57,9 +48,10 @@ type VoiceEventProcessor struct {
 	namespace           string
 	topicName           string
 	voiceClient         voiceRoomClient
-	gameSessionService  gameSessionFetcher
 	notificationService lobbyNotifier
 	logger              *logrus.Entry
+	enableTeamVoice     bool
+	enableGameVoice     bool
 }
 
 var _ voiceOrchestrator = (*VoiceEventProcessor)(nil)
@@ -69,9 +61,10 @@ type VoiceProcessorConfig struct {
 	Namespace           string
 	NotificationTopic   string
 	VoiceClient         voiceRoomClient
-	GameSessionService  gameSessionFetcher
 	NotificationService lobbyNotifier
 	Logger              *logrus.Entry
+	EnableTeamVoice     bool
+	EnableGameVoice     bool
 }
 
 // NewVoiceEventProcessor builds a VoiceEventProcessor with sane defaults.
@@ -81,9 +74,6 @@ func NewVoiceEventProcessor(cfg VoiceProcessorConfig) (*VoiceEventProcessor, err
 	}
 	if cfg.NotificationService == nil {
 		return nil, errors.New("voice processor: notification service is required")
-	}
-	if cfg.GameSessionService == nil {
-		return nil, errors.New("voice processor: game session service is required")
 	}
 	logger := cfg.Logger
 	if logger == nil {
@@ -98,9 +88,10 @@ func NewVoiceEventProcessor(cfg VoiceProcessorConfig) (*VoiceEventProcessor, err
 		namespace:           cfg.Namespace,
 		topicName:           topic,
 		voiceClient:         cfg.VoiceClient,
-		gameSessionService:  cfg.GameSessionService,
 		notificationService: cfg.NotificationService,
 		logger:              logger,
+		enableTeamVoice:     cfg.EnableTeamVoice,
+		enableGameVoice:     cfg.EnableGameVoice,
 	}, nil
 }
 
@@ -110,60 +101,125 @@ func (p *VoiceEventProcessor) HandleGameSessionCreated(ctx context.Context, sess
 		return errors.New("handle game session created: session ID is required")
 	}
 
-	roomMembers, err := p.parseGameSessionSnapshot(encodedSnapshot)
+	if !p.enableTeamVoice && !p.enableGameVoice {
+		p.logger.WithField("sessionId", sessionID).Debug("handle game session created: game voice disabled")
+		return nil
+	}
+
+	snapshot, err := decodeGameSessionSnapshot(encodedSnapshot)
 	if err != nil {
 		p.logger.WithError(err).WithField("sessionId", sessionID).Warn("handle game session created: snapshot decode failed, skipping")
 		return nil
 	}
-	if len(roomMembers) == 0 {
+	if snapshot == nil {
 		p.logger.WithField("sessionId", sessionID).Warn("handle game session created: empty snapshot membership, skipping")
 		return nil
 	}
-	for roomID, members := range roomMembers {
-		if err := p.createParticipants(ctx, sessionID, roomID, members, notificationTypeGame); err != nil {
-			p.logger.WithError(err).WithFields(logrus.Fields{
+
+	if p.enableTeamVoice {
+		roomMembers := buildGameSessionRoomMembershipsFromSnapshot(snapshot)
+		if len(roomMembers) == 0 {
+			p.logger.WithField("sessionId", sessionID).Warn("handle game session created: empty snapshot membership, skipping")
+		} else {
+			for roomID, members := range roomMembers {
+				if err := p.createParticipants(ctx, sessionID, roomID, members, notificationTypeTeam); err != nil {
+					p.logger.WithError(err).WithFields(logrus.Fields{
+						"sessionId": sessionID,
+						"roomId":    roomID,
+					}).Error("handle game session created: failed to create participants")
+				}
+			}
+			p.logger.WithFields(logrus.Fields{
 				"sessionId": sessionID,
-				"roomId":    roomID,
-			}).Error("handle game session created: failed to create participants")
+				"roomCount": len(roomMembers),
+				"participantCount": func() int {
+					count := 0
+					for _, members := range roomMembers {
+						count += len(members)
+					}
+					return count
+				}(),
+			}).Debug("handle game session created: snapshot decoded")
 		}
 	}
-	p.logger.WithFields(logrus.Fields{
-		"sessionId": sessionID,
-		"roomCount": len(roomMembers),
-		"participantCount": func() int {
-			count := 0
-			for _, members := range roomMembers {
-				count += len(members)
+
+	if p.enableGameVoice {
+		if len(snapshot.Teams) == 0 && p.enableTeamVoice {
+			p.logger.WithField("sessionId", sessionID).Debug("handle game session created: skipping session-wide room because snapshot has no teams")
+		} else {
+			allMembers := buildGameSessionMembersFromSnapshot(snapshot)
+			if len(allMembers) == 0 {
+				p.logger.WithField("sessionId", sessionID).Warn("handle game session created: no active members for session-wide room")
+			} else {
+				roomID := defaultGameSessionRoomID(snapshot.ID)
+				if err := p.createParticipants(ctx, sessionID, roomID, allMembers, notificationTypeGame); err != nil {
+					p.logger.WithError(err).WithFields(logrus.Fields{
+						"sessionId": sessionID,
+						"roomId":    roomID,
+					}).Error("handle game session created: failed to create session-wide participants")
+				} else {
+					p.logger.WithFields(logrus.Fields{
+						"sessionId":        sessionID,
+						"roomId":           roomID,
+						"participantCount": len(allMembers),
+					}).Debug("handle game session created: processed session-wide members")
+				}
 			}
-			return count
-		}(),
-	}).Debug("handle game session created: snapshot decoded")
+		}
+	}
 
 	return nil
 }
 
 // HandleGameSessionEnded revokes every participant token for the supplied session.
-func (p *VoiceEventProcessor) HandleGameSessionEnded(ctx context.Context, sessionID string) error {
+func (p *VoiceEventProcessor) HandleGameSessionEnded(ctx context.Context, sessionID string, encodedSnapshot string) error {
 	if sessionID == "" {
 		return errors.New("handle game session ended: session ID is required")
 	}
 
-	session, err := p.fetchGameSession(ctx, sessionID)
-	if err != nil {
-		if errors.Is(err, errGameSessionNotFound) {
-			p.logger.WithField("sessionId", sessionID).Warn("handle game session ended: session not found, skipping cleanup")
-			return nil
-		}
-		return err
+	if !p.enableTeamVoice && !p.enableGameVoice {
+		p.logger.WithField("sessionId", sessionID).Debug("handle game session ended: game voice disabled")
+		return nil
 	}
 
-	roomMembers := buildGameSessionRoomMemberships(session)
-	for roomID, members := range roomMembers {
-		if err := p.removeParticipants(ctx, sessionID, roomID, members); err != nil {
-			p.logger.WithError(err).WithFields(logrus.Fields{
-				"sessionId": sessionID,
-				"roomId":    roomID,
-			}).Warn("handle game session ended: failed to revoke participants")
+	snapshot, err := decodeGameSessionSnapshot(encodedSnapshot)
+	if err != nil {
+		p.logger.WithError(err).WithField("sessionId", sessionID).Warn("handle game session ended: snapshot decode failed, skipping")
+		return nil
+	}
+	if snapshot == nil {
+		p.logger.WithField("sessionId", sessionID).Warn("handle game session ended: empty snapshot membership, skipping")
+		return nil
+	}
+
+	if p.enableTeamVoice {
+		roomMembers := buildGameSessionRoomMembershipsFromSnapshot(snapshot)
+		for roomID, members := range roomMembers {
+			if err := p.removeParticipants(ctx, sessionID, roomID, members); err != nil {
+				p.logger.WithError(err).WithFields(logrus.Fields{
+					"sessionId": sessionID,
+					"roomId":    roomID,
+				}).Warn("handle game session ended: failed to revoke participants")
+			}
+		}
+	}
+
+	if p.enableGameVoice {
+		if len(snapshot.Teams) == 0 && p.enableTeamVoice {
+			p.logger.WithField("sessionId", sessionID).Debug("handle game session ended: skipping session-wide teardown because no teams were present")
+		} else {
+			allMembers := buildGameSessionMembersFromSnapshot(snapshot)
+			if len(allMembers) == 0 {
+				p.logger.WithField("sessionId", sessionID).Debug("handle game session ended: no session-wide members to revoke")
+			} else {
+				roomID := defaultGameSessionRoomID(snapshot.ID)
+				if err := p.removeParticipants(ctx, sessionID, roomID, allMembers); err != nil {
+					p.logger.WithError(err).WithFields(logrus.Fields{
+						"sessionId": sessionID,
+						"roomId":    roomID,
+					}).Warn("handle game session ended: failed to revoke session-wide participants")
+				}
+			}
 		}
 	}
 
@@ -171,24 +227,34 @@ func (p *VoiceEventProcessor) HandleGameSessionEnded(ctx context.Context, sessio
 }
 
 // HandlePartyCreated ensures an initial voice token exists for each active member.
-func (p *VoiceEventProcessor) HandlePartyCreated(ctx context.Context, partyID string, userIDs []string) error {
+func (p *VoiceEventProcessor) HandlePartyCreated(ctx context.Context, partyID string, snapshot string, userIDs []string) error {
 	if partyID == "" {
 		return errors.New("handle party created: party ID is required")
 	}
 
-	if len(userIDs) == 0 {
-		p.logger.WithField("partyId", partyID).Warn("handle party created: payload missing user IDs, skipping")
-		return nil
+	members := uniqueStrings(userIDs)
+	if len(members) == 0 {
+		derived, err := parsePartySnapshotMembers(snapshot)
+		if err != nil {
+			p.logger.WithError(err).WithField("partyId", partyID).Warn("handle party created: snapshot decode failed, skipping")
+			return nil
+		}
+		members = uniqueStrings(derived)
+		if len(members) == 0 {
+			p.logger.WithField("partyId", partyID).Warn("handle party created: unable to resolve user IDs, skipping")
+			return nil
+		}
+		p.logger.WithField("partyId", partyID).Debug("handle party created: derived user IDs from snapshot")
 	}
 
 	roomID := partyVoiceRoomID(partyID)
-	if err := p.createParticipants(ctx, partyID, roomID, userIDs, notificationTypeParty); err != nil {
+	if err := p.createParticipants(ctx, partyID, roomID, members, notificationTypeParty); err != nil {
 		return fmt.Errorf("handle party created: create participants: %w", err)
 	}
 	p.logger.WithFields(logrus.Fields{
 		"partyId":          partyID,
-		"participantCount": len(userIDs),
-	}).Debug("handle party created: processed payload user IDs")
+		"participantCount": len(members),
+	}).Debug("handle party created: processed user IDs")
 
 	return nil
 }
@@ -214,12 +280,23 @@ func (p *VoiceEventProcessor) HandlePartyMembersRemoved(ctx context.Context, par
 
 func (p *VoiceEventProcessor) createParticipants(ctx context.Context, sessionID, roomID string, userIDs []string, notificationType string) error {
 	if len(userIDs) == 0 {
+		p.logger.WithFields(logrus.Fields{
+			"sessionId": sessionID,
+			"roomId":    roomID,
+		}).Debug("create participants: no user IDs provided")
 		return nil
 	}
 
 	if notificationType == "" {
-		notificationType = notificationTypeGame
+		notificationType = notificationTypeTeam
 	}
+
+	p.logger.WithFields(logrus.Fields{
+		"sessionId":          sessionID,
+		"roomId":             roomID,
+		"notificationType":   notificationType,
+		"requestedUserCount": len(userIDs),
+	}).Debug("create participants: resolving EOS IDs")
 
 	eosMap, err := p.fetchEOSIDs(ctx, userIDs)
 	if err != nil {
@@ -228,6 +305,7 @@ func (p *VoiceEventProcessor) createParticipants(ctx context.Context, sessionID,
 
 	participants := make([]voiceclient.Participant, 0, len(userIDs))
 	abToEos := make(map[string]string, len(userIDs))
+	missing := 0
 	for _, uid := range userIDs {
 		eosID := eosMap[uid]
 		if eosID == "" {
@@ -236,6 +314,7 @@ func (p *VoiceEventProcessor) createParticipants(ctx context.Context, sessionID,
 				"roomId":    roomID,
 				"userId":    uid,
 			}).Warn("create participants: missing EOS ID, skipping")
+			missing++
 			continue
 		}
 		participants = append(participants, voiceclient.Participant{
@@ -244,15 +323,41 @@ func (p *VoiceEventProcessor) createParticipants(ctx context.Context, sessionID,
 		})
 		abToEos[uid] = eosID
 	}
+	p.logger.WithFields(logrus.Fields{
+		"sessionId":            sessionID,
+		"roomId":               roomID,
+		"notificationType":     notificationType,
+		"resolvedParticipants": len(participants),
+		"skippedUsers":         missing,
+	}).Debug("create participants: resolved participant identities")
 
 	if len(participants) == 0 {
+		p.logger.WithFields(logrus.Fields{
+			"sessionId":        sessionID,
+			"roomId":           roomID,
+			"notificationType": notificationType,
+		}).Warn("create participants: no participants resolved after EOS lookup")
 		return nil
 	}
 
+	p.logger.WithFields(logrus.Fields{
+		"sessionId":        sessionID,
+		"roomId":           roomID,
+		"notificationType": notificationType,
+		"participantCount": len(participants),
+	}).Debug("create participants: requesting voice tokens")
 	resp, err := p.voiceClient.CreateRoomTokens(ctx, roomID, participants)
 	if err != nil {
 		return err
 	}
+	p.logger.WithFields(logrus.Fields{
+		"sessionId":             sessionID,
+		"roomId":                resp.RoomID,
+		"notificationType":      notificationType,
+		"requestedParticipants": len(participants),
+		"tokenCount":            len(resp.Participants),
+		"clientBaseUrl":         resp.ClientBaseURL,
+	}).Debug("create participants: created voice tokens")
 
 	// Map EOS -> AccelByte user ID for notifications.
 	eosToUserID := invertMap(abToEos)
@@ -269,7 +374,7 @@ func (p *VoiceEventProcessor) createParticipants(ctx context.Context, sessionID,
 			"clientBaseUrl": resp.ClientBaseURL,
 			"token":         participant.Token,
 		}
-		if notificationType == notificationTypeGame {
+		if notificationType == notificationTypeTeam {
 			if parts := strings.SplitN(resp.RoomID, ":", 2); len(parts) == 2 {
 				notification["teamId"] = parts[1]
 			}
@@ -283,7 +388,16 @@ func (p *VoiceEventProcessor) createParticipants(ctx context.Context, sessionID,
 			p.logger.WithError(err).WithFields(logrus.Fields{
 				"userId": userID,
 			}).Warn("create participants: send notification failed")
+			continue
 		}
+		p.logger.WithFields(logrus.Fields{
+			"userId":           userID,
+			"sessionId":        sessionID,
+			"roomId":           resp.RoomID,
+			"notificationType": notificationType,
+			"tokenLength":      len(participant.Token),
+			"clientBaseUrl":    resp.ClientBaseURL,
+		}).Debug("create participants: notification dispatched")
 	}
 
 	return nil
@@ -354,48 +468,6 @@ func (p *VoiceEventProcessor) fetchEOSIDs(ctx context.Context, userIDs []string)
 	return result, nil
 }
 
-func buildGameSessionRoomMemberships(session *sessionModels.ApimodelsGameSessionResponse) map[string][]string {
-	result := map[string][]string{}
-	if session == nil {
-		return result
-	}
-
-	memberLookup := map[string]*sessionModels.ApimodelsUserResponse{}
-	for _, member := range session.Members {
-		if member == nil || member.ID == nil {
-			continue
-		}
-		memberLookup[*member.ID] = member
-	}
-
-	if len(session.Teams) == 0 {
-		active := filterActiveMembers(session.Members)
-		roomID := defaultGameSessionRoomID(*session.ID)
-		result[roomID] = active
-		return result
-	}
-
-	for idx, team := range session.Teams {
-		if team == nil {
-			continue
-		}
-		teamID := strings.TrimSpace(team.TeamID)
-		if teamID == "" {
-			teamID = fmt.Sprintf("%d", idx)
-		}
-		roomID := fmt.Sprintf("%s:%s", *session.ID, teamID)
-		var users []string
-		for _, uid := range team.UserIDs {
-			if member, ok := memberLookup[uid]; ok && isActiveStatus(member.Status, member.StatusV2) {
-				users = append(users, uid)
-			}
-		}
-		result[roomID] = users
-	}
-
-	return result
-}
-
 func buildGameSessionRoomMembershipsFromSnapshot(snapshot *gameSessionSnapshot) map[string][]string {
 	result := map[string][]string{}
 	if snapshot == nil || snapshot.ID == "" {
@@ -447,17 +519,20 @@ func buildGameSessionRoomMembershipsFromSnapshot(snapshot *gameSessionSnapshot) 
 	return result
 }
 
-func filterActiveMembers(members []*sessionModels.ApimodelsUserResponse) []string {
-	var result []string
-	for _, member := range members {
-		if member == nil || member.ID == nil {
+func buildGameSessionMembersFromSnapshot(snapshot *gameSessionSnapshot) []string {
+	if snapshot == nil {
+		return nil
+	}
+	var members []string
+	for _, member := range snapshot.Members {
+		if member.ID == "" {
 			continue
 		}
-		if isActiveStatus(member.Status, member.StatusV2) {
-			result = append(result, *member.ID)
+		if isActiveStatus(&member.Status, &member.StatusV2) {
+			members = append(members, member.ID)
 		}
 	}
-	return result
+	return uniqueStrings(members)
 }
 
 func isActiveStatus(statusPtr, statusV2Ptr *string) bool {
@@ -527,28 +602,24 @@ func invertMap(m map[string]string) map[string]string {
 	return result
 }
 
-func isGameSessionNotFound(err error) bool {
-	var target *sessionGame.GetGameSessionNotFound
-	return errors.As(err, &target)
-}
-
 func (p *VoiceEventProcessor) parseGameSessionSnapshot(encoded string) (map[string][]string, error) {
-	trimmed := strings.TrimSpace(encoded)
-	if trimmed == "" {
+	snapshot, err := decodeGameSessionSnapshot(encoded)
+	if err != nil {
+		return nil, err
+	}
+	if snapshot == nil {
 		return nil, nil
 	}
-	var data []byte
-	var err error
-	if strings.HasPrefix(trimmed, "{") {
-		data = []byte(trimmed)
-	} else {
-		data, err = base64.StdEncoding.DecodeString(trimmed)
-		if err != nil {
-			data, err = base64.RawStdEncoding.DecodeString(trimmed)
-			if err != nil {
-				return nil, fmt.Errorf("decode snapshot: %w", err)
-			}
-		}
+	return buildGameSessionRoomMembershipsFromSnapshot(snapshot), nil
+}
+
+func decodeGameSessionSnapshot(encoded string) (*gameSessionSnapshot, error) {
+	data, err := decodeSnapshotEnvelope(encoded)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, nil
 	}
 	var envelope gameSessionSnapshotEnvelope
 	if err := json.Unmarshal(data, &envelope); err != nil {
@@ -557,7 +628,52 @@ func (p *VoiceEventProcessor) parseGameSessionSnapshot(encoded string) (map[stri
 	if envelope.Payload.ID == "" {
 		return nil, errors.New("snapshot missing session ID")
 	}
-	return buildGameSessionRoomMembershipsFromSnapshot(&envelope.Payload), nil
+	return &envelope.Payload, nil
+}
+
+func parsePartySnapshotMembers(encoded string) ([]string, error) {
+	data, err := decodeSnapshotEnvelope(encoded)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, nil
+	}
+	var envelope gameSessionSnapshotEnvelope
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		return nil, fmt.Errorf("unmarshal party snapshot: %w", err)
+	}
+	if envelope.Payload.ID == "" {
+		return nil, errors.New("party snapshot missing session ID")
+	}
+	var members []string
+	for _, member := range envelope.Payload.Members {
+		if member.ID == "" {
+			continue
+		}
+		if isActiveStatus(&member.Status, &member.StatusV2) {
+			members = append(members, member.ID)
+		}
+	}
+	return members, nil
+}
+
+func decodeSnapshotEnvelope(encoded string) ([]byte, error) {
+	trimmed := strings.TrimSpace(encoded)
+	if trimmed == "" {
+		return nil, nil
+	}
+	if strings.HasPrefix(trimmed, "{") {
+		return []byte(trimmed), nil
+	}
+	data, err := base64.StdEncoding.DecodeString(trimmed)
+	if err != nil {
+		data, err = base64.RawStdEncoding.DecodeString(trimmed)
+		if err != nil {
+			return nil, fmt.Errorf("decode snapshot: %w", err)
+		}
+	}
+	return data, nil
 }
 
 type gameSessionSnapshotEnvelope struct {
@@ -579,19 +695,4 @@ type gameSessionMember struct {
 type gameSessionTeam struct {
 	TeamID  string   `json:"teamID"`
 	UserIDs []string `json:"userIDs"`
-}
-
-func (p *VoiceEventProcessor) fetchGameSession(ctx context.Context, sessionID string) (*sessionModels.ApimodelsGameSessionResponse, error) {
-	params := sessionGame.NewGetGameSessionParamsWithContext(ctx)
-	params.Namespace = p.namespace
-	params.SessionID = sessionID
-
-	data, err := p.gameSessionService.GetGameSessionShort(params)
-	if err != nil {
-		if isGameSessionNotFound(err) {
-			return nil, fmt.Errorf("%w", errGameSessionNotFound)
-		}
-		return nil, fmt.Errorf("fetch game session %s: %w", sessionID, err)
-	}
-	return data, nil
 }

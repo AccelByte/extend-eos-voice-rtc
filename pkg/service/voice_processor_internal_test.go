@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"testing"
@@ -12,8 +11,6 @@ import (
 	"extend-eos-voice-rtc/pkg/voiceclient"
 
 	lobbyNotification "github.com/AccelByte/accelbyte-go-sdk/lobby-sdk/pkg/lobbyclient/notification"
-	sessionGame "github.com/AccelByte/accelbyte-go-sdk/session-sdk/pkg/sessionclient/game_session"
-	sessionModels "github.com/AccelByte/accelbyte-go-sdk/session-sdk/pkg/sessionclientmodels"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,16 +21,9 @@ func TestNewVoiceEventProcessorValidation(t *testing.T) {
 	if _, err := NewVoiceEventProcessor(VoiceProcessorConfig{VoiceClient: &fakeVoiceClient{}}); err == nil {
 		t.Fatalf("expected error when notification service missing")
 	}
-	if _, err := NewVoiceEventProcessor(VoiceProcessorConfig{
-		VoiceClient:         &fakeVoiceClient{},
-		NotificationService: &fakeNotificationService{},
-	}); err == nil {
-		t.Fatalf("expected error when game session service missing")
-	}
 	cfg := VoiceProcessorConfig{
 		Namespace:           "ns",
 		VoiceClient:         &fakeVoiceClient{},
-		GameSessionService:  &fakeGameSessionService{},
 		NotificationService: &fakeNotificationService{},
 	}
 	processor, err := NewVoiceEventProcessor(cfg)
@@ -66,12 +56,11 @@ func TestCreateParticipantsSendsNotifications(t *testing.T) {
 		namespace:           "ns",
 		topicName:           "topic",
 		voiceClient:         client,
-		gameSessionService:  &fakeGameSessionService{},
 		notificationService: notifier,
 		logger:              logrus.New().WithField("component", "voice-test"),
 	}
 
-	err := processor.createParticipants(context.Background(), "session-1", "session-1:blue", []string{"user-1", "user-2"}, notificationTypeGame)
+	err := processor.createParticipants(context.Background(), "session-1", "session-1:blue", []string{"user-1", "user-2"}, notificationTypeTeam)
 	if err != nil {
 		t.Fatalf("createParticipants returned error: %v", err)
 	}
@@ -90,7 +79,7 @@ func TestCreateParticipantsSendsNotifications(t *testing.T) {
 		if err := json.Unmarshal([]byte(rec.message), &payload); err != nil {
 			t.Fatalf("unable to decode notification payload: %v", err)
 		}
-		if payload["token"] == "" || payload["teamId"] != "blue" {
+		if payload["token"] == "" || payload["teamId"] != "blue" || payload["type"] != notificationTypeTeam {
 			t.Fatalf("unexpected notification payload: %+v", payload)
 		}
 	}
@@ -107,12 +96,12 @@ func TestCreateParticipantsSkipsMissingIDs(t *testing.T) {
 		namespace:           "ns",
 		topicName:           "topic",
 		voiceClient:         client,
-		gameSessionService:  &fakeGameSessionService{},
 		notificationService: &fakeNotificationService{},
 		logger:              logrus.New().WithField("component", "voice-test"),
+		enableTeamVoice:     true,
 	}
 
-	if err := processor.createParticipants(context.Background(), "session-1", "session-1:0", []string{"user-1"}, notificationTypeGame); err != nil {
+	if err := processor.createParticipants(context.Background(), "session-1", "session-1:0", []string{"user-1"}, notificationTypeTeam); err != nil {
 		t.Fatalf("expected no error when EOS IDs missing: %v", err)
 	}
 	if len(client.createCalls) != 0 {
@@ -129,7 +118,6 @@ func TestRemoveParticipantsRevokesTokens(t *testing.T) {
 	}
 	processor := &VoiceEventProcessor{
 		voiceClient:         client,
-		gameSessionService:  &fakeGameSessionService{},
 		notificationService: &fakeNotificationService{},
 		logger:              logrus.New().WithField("component", "voice-test"),
 	}
@@ -150,7 +138,6 @@ func TestFetchEOSIDsDeduplicatesAndBatches(t *testing.T) {
 	}
 	processor := &VoiceEventProcessor{
 		voiceClient:         client,
-		gameSessionService:  &fakeGameSessionService{},
 		notificationService: &fakeNotificationService{},
 		logger:              logrus.New().WithField("component", "voice-test"),
 	}
@@ -170,33 +157,6 @@ func TestFetchEOSIDsDeduplicatesAndBatches(t *testing.T) {
 	}
 	if len(client.queryBatches) != 2 {
 		t.Fatalf("expected batching, got %d batches", len(client.queryBatches))
-	}
-}
-
-func TestBuildGameSessionRoomMemberships(t *testing.T) {
-	sessionID := "session-1"
-	user1 := "user-1"
-	user2 := "user-2"
-	member1Status := "JOINED"
-	member2Status := "LEFT"
-	session := &sessionModels.ApimodelsGameSessionResponse{
-		ID: &sessionID,
-		Members: []*sessionModels.ApimodelsUserResponse{
-			{ID: &user1, Status: &member1Status},
-			{ID: &user2, Status: &member2Status},
-		},
-		Teams: []*sessionModels.ModelsTeam{
-			{TeamID: "alpha", UserIDs: []string{user1, user2}},
-		},
-	}
-
-	result := buildGameSessionRoomMemberships(session)
-	if len(result) != 1 {
-		t.Fatalf("expected one room, got %d", len(result))
-	}
-	users := result["session-1:alpha"]
-	if len(users) != 1 || users[0] != "user-1" {
-		t.Fatalf("room members not filtered: %+v", users)
 	}
 }
 
@@ -231,14 +191,6 @@ func TestHelperFunctions(t *testing.T) {
 	if got := defaultGameSessionRoomID("session-1"); got != "session-1:0" {
 		t.Fatalf("unexpected default room %s", got)
 	}
-	members := []*sessionModels.ApimodelsUserResponse{
-		{ID: ptr("user-1"), Status: ptr("JOINED")},
-		{ID: ptr("user-2"), Status: ptr("LEFT")},
-	}
-	active := filterActiveMembers(members)
-	if len(active) != 1 || active[0] != "user-1" {
-		t.Fatalf("filterActiveMembers failed: %+v", active)
-	}
 	items := []string{"b", "a", "a"}
 	unique := uniqueStrings(items)
 	sort.Strings(unique)
@@ -256,20 +208,6 @@ func TestHelperFunctions(t *testing.T) {
 }
 
 func TestHandleGameSessionEndedRevokesMembers(t *testing.T) {
-	sessionID := "session-1"
-	memberStatus := "JOINED"
-	session := &sessionModels.ApimodelsGameSessionResponse{
-		ID: &sessionID,
-		Members: []*sessionModels.ApimodelsUserResponse{
-			{ID: ptr("user-1"), Status: &memberStatus},
-			{ID: ptr("user-2"), Status: &memberStatus},
-		},
-		Teams: []*sessionModels.ModelsTeam{
-			{TeamID: "alpha", UserIDs: []string{"user-1"}},
-			{TeamID: "beta", UserIDs: []string{"user-2"}},
-		},
-	}
-	service := &fakeGameSessionService{resp: session}
 	client := &fakeVoiceClient{
 		queryResult: map[string]string{
 			"user-1": "puid-1",
@@ -279,35 +217,56 @@ func TestHandleGameSessionEndedRevokesMembers(t *testing.T) {
 	processor := &VoiceEventProcessor{
 		namespace:           "ns",
 		topicName:           "topic",
-		gameSessionService:  service,
 		voiceClient:         client,
 		notificationService: &fakeNotificationService{},
 		logger:              logrus.New().WithField("component", "voice-test"),
+		enableTeamVoice:     true,
 	}
 
-	if err := processor.HandleGameSessionEnded(context.Background(), sessionID); err != nil {
-		t.Fatalf("handle ended returned error: %v", err)
+	snapshot := gameSessionSnapshotEnvelope{
+		Payload: gameSessionSnapshot{
+			ID: "session-1",
+			Teams: []gameSessionTeam{
+				{TeamID: "alpha", UserIDs: []string{"user-1"}},
+				{TeamID: "beta", UserIDs: []string{"user-2"}},
+			},
+			Members: []gameSessionMember{
+				{ID: "user-1", Status: "JOINED"},
+				{ID: "user-2", Status: "JOINED"},
+			},
+		},
+	}
+	data, _ := json.Marshal(snapshot)
+	encoded := base64.StdEncoding.EncodeToString(data)
+
+	if err := processor.HandleGameSessionEnded(context.Background(), "session-1", encoded); err != nil {
+		t.Fatalf("handle game session ended returned error: %v", err)
 	}
 	if len(client.removeCalls) != 2 {
 		t.Fatalf("expected 2 revocations, got %d", len(client.removeCalls))
 	}
 }
 
-func TestHandleGameSessionEndedWhenSessionMissing(t *testing.T) {
-	service := &fakeGameSessionService{
-		err: &sessionGame.GetGameSessionNotFound{},
-	}
+func TestHandleGameSessionEndedMissingSnapshot(t *testing.T) {
+	client := &fakeVoiceClient{}
 	processor := &VoiceEventProcessor{
 		namespace:           "ns",
 		topicName:           "topic",
-		gameSessionService:  service,
-		voiceClient:         &fakeVoiceClient{},
+		voiceClient:         client,
 		notificationService: &fakeNotificationService{},
 		logger:              logrus.New().WithField("component", "voice-test"),
+		enableTeamVoice:     true,
 	}
 
-	if err := processor.HandleGameSessionEnded(context.Background(), "missing"); err != nil {
-		t.Fatalf("expected nil error when session missing, got %v", err)
+	if err := processor.HandleGameSessionEnded(context.Background(), "session-1", ""); err != nil {
+		t.Fatalf("expected nil error when snapshot missing, got %v", err)
+	}
+	if len(client.removeCalls) != 0 {
+		t.Fatalf("expected no removals when snapshot missing")
+	}
+
+	if err := processor.HandleGameSessionEnded(context.Background(), "session-1", "invalid-base64"); err != nil {
+		t.Fatalf("expected parse errors to be swallowed, got %v", err)
 	}
 }
 
@@ -326,9 +285,9 @@ func TestHandleGameSessionCreated(t *testing.T) {
 		namespace:           "ns",
 		topicName:           "topic",
 		voiceClient:         client,
-		gameSessionService:  &fakeGameSessionService{},
 		notificationService: &fakeNotificationService{},
 		logger:              logrus.New().WithField("component", "voice-test"),
+		enableTeamVoice:     true,
 	}
 	snapshot := gameSessionSnapshotEnvelope{
 		Payload: gameSessionSnapshot{
@@ -345,6 +304,150 @@ func TestHandleGameSessionCreated(t *testing.T) {
 	}
 	if len(client.createCalls) != 1 {
 		t.Fatalf("expected create participants, got %d calls", len(client.createCalls))
+	}
+}
+
+func TestHandleGameSessionCreatedSessionWide(t *testing.T) {
+	client := &fakeVoiceClient{
+		queryResult: map[string]string{
+			"user-1": "puid-1",
+			"user-2": "puid-2",
+		},
+		createResponse: &voiceclient.CreateRoomTokenResponse{
+			RoomID:        "session-20:0",
+			ClientBaseURL: "wss://voice",
+			Participants: []voiceclient.CreateRoomTokenParticipant{
+				{ProductUserID: "puid-1", Token: "token-1"},
+				{ProductUserID: "puid-2", Token: "token-2"},
+			},
+		},
+	}
+	notifier := &fakeNotificationService{}
+	processor := &VoiceEventProcessor{
+		namespace:           "ns",
+		topicName:           "topic",
+		voiceClient:         client,
+		notificationService: notifier,
+		logger:              logrus.New().WithField("component", "voice-test"),
+		enableGameVoice:     true,
+	}
+	snapshot := gameSessionSnapshotEnvelope{
+		Payload: gameSessionSnapshot{
+			ID: "session-20",
+			Teams: []gameSessionTeam{
+				{TeamID: "alpha", UserIDs: []string{"user-1"}},
+				{TeamID: "beta", UserIDs: []string{"user-2"}},
+			},
+			Members: []gameSessionMember{
+				{ID: "user-1", Status: "JOINED"},
+				{ID: "user-2", Status: "JOINED"},
+			},
+		},
+	}
+	data, _ := json.Marshal(snapshot)
+	encoded := base64.StdEncoding.EncodeToString(data)
+	if err := processor.HandleGameSessionCreated(context.Background(), "session-20", encoded); err != nil {
+		t.Fatalf("handle game session created (session-wide) returned error: %v", err)
+	}
+	if len(client.createCalls) != 1 {
+		t.Fatalf("expected session-wide create call, got %d", len(client.createCalls))
+	}
+	if client.createCalls[0].roomID != "session-20:0" {
+		t.Fatalf("expected aggregated room, got %s", client.createCalls[0].roomID)
+	}
+	if got := len(client.createCalls[0].participants); got != 2 {
+		t.Fatalf("expected two participants, got %d", got)
+	}
+	if len(notifier.sent) != 2 {
+		t.Fatalf("expected notifications for aggregated room, got %d", len(notifier.sent))
+	}
+	for _, rec := range notifier.sent {
+		var payload map[string]string
+		if err := json.Unmarshal([]byte(rec.message), &payload); err != nil {
+			t.Fatalf("unable to decode notification payload: %v", err)
+		}
+		if payload["type"] != notificationTypeGame {
+			t.Fatalf("expected game notification, got %+v", payload)
+		}
+		if payload["teamId"] != "" {
+			t.Fatalf("did not expect teamId for session-wide payload: %+v", payload)
+		}
+	}
+}
+
+func TestHandleGameSessionCreatedSkipsDuplicateGameRoom(t *testing.T) {
+	client := &fakeVoiceClient{
+		queryResult: map[string]string{"user-1": "puid-1"},
+		createResponse: &voiceclient.CreateRoomTokenResponse{
+			RoomID:        "session-30:0",
+			ClientBaseURL: "wss://voice",
+			Participants: []voiceclient.CreateRoomTokenParticipant{
+				{ProductUserID: "puid-1", Token: "token-1"},
+			},
+		},
+	}
+	processor := &VoiceEventProcessor{
+		namespace:           "ns",
+		topicName:           "topic",
+		voiceClient:         client,
+		notificationService: &fakeNotificationService{},
+		logger:              logrus.New().WithField("component", "voice-test"),
+		enableTeamVoice:     true,
+		enableGameVoice:     true,
+	}
+	snapshot := gameSessionSnapshotEnvelope{
+		Payload: gameSessionSnapshot{
+			ID: "session-30",
+			Members: []gameSessionMember{
+				{ID: "user-1", Status: "JOINED"},
+			},
+		},
+	}
+	data, _ := json.Marshal(snapshot)
+	encoded := base64.StdEncoding.EncodeToString(data)
+	if err := processor.HandleGameSessionCreated(context.Background(), "session-30", encoded); err != nil {
+		t.Fatalf("handle game session created returned error: %v", err)
+	}
+	if len(client.createCalls) != 1 {
+		t.Fatalf("expected only team voice call when no teams exist, got %d", len(client.createCalls))
+	}
+}
+
+func TestHandleGameSessionEndedSessionWide(t *testing.T) {
+	client := &fakeVoiceClient{
+		queryResult: map[string]string{
+			"user-1": "puid-1",
+			"user-2": "puid-2",
+		},
+	}
+	processor := &VoiceEventProcessor{
+		namespace:           "ns",
+		topicName:           "topic",
+		voiceClient:         client,
+		notificationService: &fakeNotificationService{},
+		logger:              logrus.New().WithField("component", "voice-test"),
+		enableGameVoice:     true,
+	}
+	snapshot := gameSessionSnapshotEnvelope{
+		Payload: gameSessionSnapshot{
+			ID: "session-40",
+			Teams: []gameSessionTeam{
+				{TeamID: "a", UserIDs: []string{"user-1", "user-2"}},
+			},
+			Members: []gameSessionMember{
+				{ID: "user-1", Status: "JOINED"},
+				{ID: "user-2", Status: "JOINED"},
+			},
+		},
+	}
+	data, _ := json.Marshal(snapshot)
+	encoded := base64.StdEncoding.EncodeToString(data)
+
+	if err := processor.HandleGameSessionEnded(context.Background(), "session-40", encoded); err != nil {
+		t.Fatalf("handle game session ended (session-wide) returned error: %v", err)
+	}
+	if len(client.removeCalls) != 2 {
+		t.Fatalf("expected aggregated revocations, got %d", len(client.removeCalls))
 	}
 }
 
@@ -367,12 +470,11 @@ func TestHandlePartyLifecycle(t *testing.T) {
 		namespace:           "ns",
 		topicName:           "topic",
 		voiceClient:         client,
-		gameSessionService:  &fakeGameSessionService{},
 		notificationService: &fakeNotificationService{},
 		logger:              logrus.New().WithField("component", "voice-test"),
 	}
 
-	if err := processor.HandlePartyCreated(context.Background(), "party-1", []string{"user-1"}); err != nil {
+	if err := processor.HandlePartyCreated(context.Background(), "party-1", "", []string{"user-1"}); err != nil {
 		t.Fatalf("handle party created error: %v", err)
 	}
 	if err := processor.HandlePartyMembersJoined(context.Background(), "party-1", []string{"user-2"}); err != nil {
@@ -389,12 +491,44 @@ func TestHandlePartyLifecycle(t *testing.T) {
 	}
 }
 
-func TestIsGameSessionNotFound(t *testing.T) {
-	if !isGameSessionNotFound(&sessionGame.GetGameSessionNotFound{}) {
-		t.Fatalf("expected true for session not found type")
+func TestHandlePartyCreatedSnapshotFallback(t *testing.T) {
+	client := &fakeVoiceClient{
+		queryResult: map[string]string{"user-1": "puid-1"},
+		createResponse: &voiceclient.CreateRoomTokenResponse{
+			RoomID:        "party-snap:Voice",
+			ClientBaseURL: "wss://voice",
+			Participants: []voiceclient.CreateRoomTokenParticipant{
+				{ProductUserID: "puid-1", Token: "token-1"},
+			},
+		},
 	}
-	if isGameSessionNotFound(errors.New("boom")) {
-		t.Fatalf("unexpected true for generic error")
+	processor := &VoiceEventProcessor{
+		namespace:           "ns",
+		topicName:           "topic",
+		voiceClient:         client,
+		notificationService: &fakeNotificationService{},
+		logger:              logrus.New().WithField("component", "voice-test"),
+	}
+	snapshot := gameSessionSnapshotEnvelope{
+		Payload: gameSessionSnapshot{
+			ID: "party-snap",
+			Members: []gameSessionMember{
+				{ID: "user-1", Status: "joined"},
+				{ID: "user-2", Status: "left"},
+			},
+		},
+	}
+	data, _ := json.Marshal(snapshot)
+	encoded := base64.StdEncoding.EncodeToString(data)
+
+	if err := processor.HandlePartyCreated(context.Background(), "party-snap", encoded, nil); err != nil {
+		t.Fatalf("handle party created with snapshot failed: %v", err)
+	}
+	if len(client.createCalls) != 1 {
+		t.Fatalf("expected one create call, got %d", len(client.createCalls))
+	}
+	if got := len(client.createCalls[0].participants); got != 1 {
+		t.Fatalf("expected one participant derived from snapshot, got %d", got)
 	}
 }
 
@@ -484,18 +618,4 @@ func (f *fakeNotificationService) SendSpecificUserFreeformNotificationV1AdminSho
 	}
 	f.sent = append(f.sent, record)
 	return nil
-}
-
-type fakeGameSessionService struct {
-	resp      *sessionModels.ApimodelsGameSessionResponse
-	err       error
-	requested []string
-}
-
-func (f *fakeGameSessionService) GetGameSessionShort(params *sessionGame.GetGameSessionParams) (*sessionModels.ApimodelsGameSessionResponse, error) {
-	f.requested = append(f.requested, params.SessionID)
-	if f.err != nil {
-		return nil, f.err
-	}
-	return f.resp, nil
 }

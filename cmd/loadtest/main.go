@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -18,8 +17,6 @@ import (
 	"extend-eos-voice-rtc/pkg/voiceclient"
 
 	lobbyNotification "github.com/AccelByte/accelbyte-go-sdk/lobby-sdk/pkg/lobbyclient/notification"
-	sessionGame "github.com/AccelByte/accelbyte-go-sdk/session-sdk/pkg/sessionclient/game_session"
-	sessionModels "github.com/AccelByte/accelbyte-go-sdk/session-sdk/pkg/sessionclientmodels"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,9 +46,9 @@ func main() {
 		Namespace:           "loadtest",
 		NotificationTopic:   "LOADTEST",
 		VoiceClient:         &loadTestVoiceClient{},
-		GameSessionService:  &loadTestGameSessionService{},
 		NotificationService: &loadTestNotifier{},
 		Logger:              logger,
+		EnableTeamVoice:     true,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to construct voice processor: %v\n", err)
@@ -175,10 +172,4 @@ type loadTestNotifier struct{}
 
 func (l *loadTestNotifier) SendSpecificUserFreeformNotificationV1AdminShort(*lobbyNotification.SendSpecificUserFreeformNotificationV1AdminParams) error {
 	return nil
-}
-
-type loadTestGameSessionService struct{}
-
-func (l *loadTestGameSessionService) GetGameSessionShort(*sessionGame.GetGameSessionParams) (*sessionModels.ApimodelsGameSessionResponse, error) {
-	return nil, errors.New("not implemented in load test")
 }

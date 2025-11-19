@@ -42,18 +42,20 @@ func (m *orchestratorMock) HandleGameSessionCreated(_ context.Context, sessionID
 	return m.gameCreateErr
 }
 
-func (m *orchestratorMock) HandleGameSessionEnded(_ context.Context, sessionID string) error {
+func (m *orchestratorMock) HandleGameSessionEnded(_ context.Context, sessionID string, snapshot string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.lastSession = sessionID
+	m.lastSnapshot = snapshot
 	m.gameEnded++
 	return m.gameEndedErr
 }
 
-func (m *orchestratorMock) HandlePartyCreated(_ context.Context, partyID string, userIDs []string) error {
+func (m *orchestratorMock) HandlePartyCreated(_ context.Context, partyID string, snapshot string, userIDs []string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.lastSession = partyID
+	m.lastSnapshot = snapshot
 	m.lastUserIDs = userIDs
 	m.partyCreated++
 	return m.partyCreateErr
@@ -83,17 +85,19 @@ func startVoiceTestServer(t *testing.T, orchestrator voiceOrchestrator) (*grpc.C
 	lis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()
 
-	sessionpb.RegisterMpv2SessionHistoryGameSessionCreatedEventServiceServer(server, NewGameSessionCreatedServer(orchestrator))
-	sessionpb.RegisterMpv2SessionHistoryGameSessionJoinedEventServiceServer(server, NewGameSessionJoinedServer(orchestrator))
-	sessionpb.RegisterMpv2SessionHistoryGameSessionMembersChangedEventServiceServer(server, NewGameSessionMembersChangedServer(orchestrator))
-	sessionpb.RegisterMpv2SessionHistoryGameSessionKickedEventServiceServer(server, NewGameSessionKickedServer(orchestrator))
-	sessionpb.RegisterMpv2SessionHistoryGameSessionEndedEventServiceServer(server, NewGameSessionEndedServer(orchestrator))
+	sessionpb.RegisterMpv2SessionHistoryGameSessionCreatedEventServiceServer(server, NewGameSessionCreatedServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryGameSessionJoinedEventServiceServer(server, NewGameSessionJoinedServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryGameSessionMembersChangedEventServiceServer(server, NewGameSessionMembersChangedServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryGameSessionKickedEventServiceServer(server, NewGameSessionKickedServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryGameSessionEndedEventServiceServer(server, NewGameSessionEndedServer(orchestrator, nil))
 
-	sessionpb.RegisterMpv2SessionHistoryPartyCreatedEventServiceServer(server, NewPartyCreatedServer(orchestrator))
-	sessionpb.RegisterMpv2SessionHistoryPartyJoinedEventServiceServer(server, NewPartyJoinedServer(orchestrator))
-	sessionpb.RegisterMpv2SessionHistoryPartyMembersChangedEventServiceServer(server, NewPartyMembersChangedServer(orchestrator))
-	sessionpb.RegisterMpv2SessionHistoryPartyLeaveEventServiceServer(server, NewPartyLeaveServer(orchestrator))
-	sessionpb.RegisterMpv2SessionHistoryPartyKickedEventServiceServer(server, NewPartyKickedServer(orchestrator))
+	sessionpb.RegisterMpv2SessionHistoryPartyCreatedEventServiceServer(server, NewPartyCreatedServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryPartyJoinedEventServiceServer(server, NewPartyJoinedServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryPartyMembersChangedEventServiceServer(server, NewPartyMembersChangedServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryPartyLeaveEventServiceServer(server, NewPartyLeaveServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryPartyKickedEventServiceServer(server, NewPartyKickedServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryPartyDeletedEventServiceServer(server, NewPartyDeletedServer(orchestrator, nil))
+	sessionpb.RegisterMpv2SessionHistoryPartyRejoinedEventServiceServer(server, NewPartyRejoinedServer(orchestrator, nil))
 
 	go func() {
 		_ = server.Serve(lis)
@@ -149,12 +153,15 @@ func TestGameSessionGRPCHandlers(t *testing.T) {
 	mock.mu.Unlock()
 
 	endedClient := sessionpb.NewMpv2SessionHistoryGameSessionEndedEventServiceClient(conn)
-	_, err := endedClient.OnMessage(context.Background(), &sessionpb.GameSessionEndedEvent{SessionId: "session-C"})
+	_, err := endedClient.OnMessage(context.Background(), &sessionpb.GameSessionEndedEvent{
+		SessionId: "session-C",
+		Payload:   &sessionpb.NotificationPayload{Message: "snapshot-data"},
+	})
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("expected internal error calling ended handler: %v", err)
 	}
 	mock.mu.Lock()
-	if mock.gameEnded != 1 || mock.lastSession != "session-C" {
+	if mock.gameEnded != 1 || mock.lastSession != "session-C" || mock.lastSnapshot != "snapshot-data" {
 		t.Fatalf("cleanup not invoked: %+v", mock)
 	}
 	mock.mu.Unlock()
@@ -166,11 +173,14 @@ func TestPartyGRPCHandlers(t *testing.T) {
 	defer cleanup()
 
 	createdClient := sessionpb.NewMpv2SessionHistoryPartyCreatedEventServiceClient(conn)
-	if _, err := createdClient.OnMessage(context.Background(), &sessionpb.PartyCreatedEvent{SessionId: "party-A", Payload: &sessionpb.NotificationPayload{UserIds: []string{"p1"}}}); err != nil {
+	if _, err := createdClient.OnMessage(context.Background(), &sessionpb.PartyCreatedEvent{
+		SessionId: "party-A",
+		Payload:   &sessionpb.NotificationPayload{UserIds: []string{"p1"}, Message: "snapshot"},
+	}); err != nil {
 		t.Fatalf("unexpected error calling party created: %v", err)
 	}
 	mock.mu.Lock()
-	if mock.partyCreated != 1 || mock.lastSession != "party-A" || len(mock.lastUserIDs) != 1 || mock.lastUserIDs[0] != "p1" {
+	if mock.partyCreated != 1 || mock.lastSession != "party-A" || mock.lastSnapshot != "snapshot" || len(mock.lastUserIDs) != 1 || mock.lastUserIDs[0] != "p1" {
 		t.Fatalf("unexpected state: %+v", mock)
 	}
 	mock.mu.Unlock()
@@ -216,6 +226,43 @@ func TestPartyGRPCHandlers(t *testing.T) {
 	mock.mu.Lock()
 	if mock.partyRemoved != 1 || mock.lastUserIDs[0] != "user-2" {
 		t.Fatalf("party removal state mismatch: %+v", mock)
+	}
+	mock.mu.Unlock()
+
+	if _, err := joinedClient.OnMessage(context.Background(), &sessionpb.PartyJoinedEvent{
+		SessionId: "party-E",
+		Payload:   &sessionpb.NotificationPayload{Message: partySnapshotMessage(t, "req-join-int")},
+	}); err != nil {
+		t.Fatalf("unexpected error deriving join snapshot: %v", err)
+	}
+	mock.mu.Lock()
+	if mock.partyJoined != 2 || mock.lastSession != "party-E" || mock.lastUserIDs[0] != "req-join-int" {
+		t.Fatalf("party join snapshot state mismatch: %+v", mock)
+	}
+	mock.mu.Unlock()
+
+	if _, err := leaveClient.OnMessage(context.Background(), &sessionpb.PartyLeaveEvent{
+		SessionId: "party-F",
+		Payload:   &sessionpb.NotificationPayload{Message: partySnapshotMessage(t, "req-leave-int")},
+	}); err != nil {
+		t.Fatalf("unexpected error deriving leave snapshot: %v", err)
+	}
+	mock.mu.Lock()
+	if mock.partyRemoved != 2 || mock.lastSession != "party-F" || mock.lastUserIDs[0] != "req-leave-int" {
+		t.Fatalf("party leave snapshot mismatch: %+v", mock)
+	}
+	mock.mu.Unlock()
+
+	kickedClient := sessionpb.NewMpv2SessionHistoryPartyKickedEventServiceClient(conn)
+	if _, err := kickedClient.OnMessage(context.Background(), &sessionpb.PartyKickedEvent{
+		SessionId: "party-G",
+		Payload:   &sessionpb.NotificationPayload{Message: partySnapshotMessage(t, "req-kick-int")},
+	}); err != nil {
+		t.Fatalf("unexpected error deriving kick snapshot: %v", err)
+	}
+	mock.mu.Lock()
+	if mock.partyRemoved != 3 || mock.lastSession != "party-G" || mock.lastUserIDs[0] != "req-kick-int" {
+		t.Fatalf("party kick snapshot mismatch: %+v", mock)
 	}
 	mock.mu.Unlock()
 }

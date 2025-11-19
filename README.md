@@ -72,9 +72,19 @@ Populate the following environment variables (either through your shell or `.env
 - `EOS_VOICE_DEPLOYMENT_ID` – Deployment identifier configured for your EOS title (required).
 - `EOS_VOICE_CLIENT_ID` / `EOS_VOICE_CLIENT_SECRET` – OAuth client credentials issued by Epic (required).
 - `EOS_VOICE_NOTIFICATION_TOPIC` – Lobby freeform notification topic that receives voice payloads (defaults to `EOS_VOICE`).
+- `ENABLE_PARTY_VOICE` – Set to `true` (default) to process party lifecycle events.
+- `ENABLE_TEAM_VOICE` – Set to `true` (default) to provision game session rooms per team.
+- `ENABLE_GAME_VOICE` – Set to `true` to create a single session-wide voice room shared by every active player (disabled by default).
 - `OTEL_EXPORTER_ZIPKIN_ENDPOINT` – Optional Zipkin trace collector endpoint if you want tracing enabled.
 
 > Players must have an EOS Product User ID linked to their AccelByte account. The handler retrieves Product User IDs via the EOS Connect `Query External Accounts` API using `identityProviderId=openId` and `accountId=<AccelByteUserID>`. The service always calls the EOS Voice Web API at `https://api.epicgames.dev/rtc/` and requests tokens from `https://api.epicgames.dev/epic/oauth/v2/token`, so no extra configuration is required for those endpoints.
+> You must create a dedicated client inside the Epic Developer Portal (follow the [client policy guide](https://dev.epicgames.com/docs/epic-online-services/client-policy/client-policy-guide)) and ensure the client policy grants the **Connect** and **Voice** permissions so the credentials can call both EOS Connect and EOS Voice APIs.
+
+## Limitations
+
+- Game and team session voice orchestration only reacts to `GameSessionCreated` and `GameSessionEnded` events; join/leave deltas are ignored for now.
+- Backfills or late joiners that appear after the create event will not be granted a voice token unless another create event is emitted.
+- Session templates must enable the Auto Join option so members are present in the snapshot payload when creation fires.
 
 ### Local `.env` Setup
 
@@ -152,3 +162,4 @@ The command fans out synthetic `GameSessionCreated` events across the specified 
 
 - `docs/voice-integration.md` – Deep dive into the EOS voice workflow.
 - AccelByte documentation on [Extend Event Handlers](https://docs.accelbyte.io/extend/) for deployment details.
+- Sample Unreal Engine plugin that consumes the voice token and joins voice rooms: [accelbyte-eos-voice-unreal](https://github.com/AccelByte/accelbyte-eos-voice-unreal).
