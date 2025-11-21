@@ -2,10 +2,7 @@
 # This is licensed software from AccelByte Inc, for limitations
 # and restrictions contact your company contract manager.
 
-# ----------------------------------------
-# Stage 1: Protoc Code Generation
-# ----------------------------------------
-FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS proto-builder
+FROM --platform=$BUILDPLATFORM ubuntu:22.04
 
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -32,6 +29,8 @@ RUN apt-get update \
     build-essential \
     ca-certificates \
     git \
+    python3-pip \
+    sudo \
     unzip \
     wget \
     #
@@ -64,78 +63,37 @@ RUN apt-get update \
     && tar -C /usr/local -xzf go.tar.gz \
     && rm go.tar.gz \
     #
+    # Install additional tools
+    && pip3 install --no-cache-dir fillenv \
+    #
     # Clean up
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory.
-WORKDIR /build
+# Create a non-root user
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+# Create user group, user account, and configure passwordless sudo access
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+# Create workspace and GOPATH directories with correct ownership
+RUN mkdir -p /workspace && chown -R $USERNAME:$USERNAME /workspace \
+    && mkdir -p /go && chown -R $USERNAME:$USERNAME /go
+
+# Switch to non-root user
+USER $USERNAME
 
 # Install protoc Go tools and plugins
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
     && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
-# Copy proto sources and generator script
-COPY proto.sh .
-COPY pkg/proto/ pkg/proto/
+# Switch back to dialog for any ad-hoc use of apt-get
+ENV DEBIAN_FRONTEND=dialog
 
-# Generate protobuf files.
-RUN chmod +x proto.sh && \
-    ./proto.sh
-
-
-
-# ----------------------------------------
-# Stage 2: Builder
-# ----------------------------------------
-FROM --platform=$BUILDPLATFORM golang:1.24-alpine3.22 AS builder
-
-# Set the value for the target OS and architecture.
-ARG TARGETOS
-ARG TARGETARCH
-
-# Set the value for GOCACHE and GOMODCACHE.
-ARG GOCACHE=/tmp/build-cache/go/cache
-ARG GOMODCACHE=/tmp/build-cache/go/modcache
-
-# Set working directory.
-WORKDIR /build
-
-# Copy and download the dependencies for application.
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy application code.
-COPY . .
-
-# Copy generated protobuf files from stage 1.
-COPY --from=proto-builder /build/pkg/pb pkg/pb
-
-# Build the Go application binary for the target OS and architecture.
-RUN env GOOS=$TARGETOS GOARCH=$TARGETARCH go build -modcacherw -o extend-event-handler_$TARGETOS-$TARGETARCH
-
-
-# ----------------------------------------
-# Stage 3: Runtime Container
-# ----------------------------------------
-FROM alpine:3.22
-
-# Set the value for the target OS and architecture.
-ARG TARGETOS
-ARG TARGETARCH
-
-# Set working directory.
-WORKDIR /app
-
-# Copy build from stage 2.
-COPY --from=builder /build/extend-event-handler_$TARGETOS-$TARGETARCH extend-event-handler
-
-# Plugin Arch gRPC Server Port.
-EXPOSE 6565
-
-# Prometheus /metrics Web Server Port.
-EXPOSE 8080
-
-# Entrypoint.
-CMD [ "/app/extend-event-handler" ]
+WORKDIR /workspace
