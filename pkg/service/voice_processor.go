@@ -151,16 +151,15 @@ func (p *VoiceEventProcessor) HandleGameSessionCreated(ctx context.Context, sess
 			if len(allMembers) == 0 {
 				p.logger.WithField("sessionId", sessionID).Warn("handle game session created: no active members for session-wide room")
 			} else {
-				roomID := defaultGameSessionRoomID(snapshot.ID)
-				if err := p.createParticipants(ctx, sessionID, roomID, allMembers, notificationTypeGame); err != nil {
+				if err := p.createParticipants(ctx, sessionID, snapshot.ID, allMembers, notificationTypeGame); err != nil {
 					p.logger.WithError(err).WithFields(logrus.Fields{
 						"sessionId": sessionID,
-						"roomId":    roomID,
+						"roomId":    snapshot.ID,
 					}).Error("handle game session created: failed to create session-wide participants")
 				} else {
 					p.logger.WithFields(logrus.Fields{
 						"sessionId":        sessionID,
-						"roomId":           roomID,
+						"roomId":           snapshot.ID,
 						"participantCount": len(allMembers),
 					}).Debug("handle game session created: processed session-wide members")
 				}
@@ -212,11 +211,10 @@ func (p *VoiceEventProcessor) HandleGameSessionEnded(ctx context.Context, sessio
 			if len(allMembers) == 0 {
 				p.logger.WithField("sessionId", sessionID).Debug("handle game session ended: no session-wide members to revoke")
 			} else {
-				roomID := defaultGameSessionRoomID(snapshot.ID)
-				if err := p.removeParticipants(ctx, sessionID, roomID, allMembers); err != nil {
+				if err := p.removeParticipants(ctx, sessionID, snapshot.ID, allMembers); err != nil {
 					p.logger.WithError(err).WithFields(logrus.Fields{
 						"sessionId": sessionID,
-						"roomId":    roomID,
+						"roomId":    snapshot.ID,
 					}).Warn("handle game session ended: failed to revoke session-wide participants")
 				}
 			}
@@ -492,7 +490,7 @@ func buildGameSessionRoomMembershipsFromSnapshot(snapshot *gameSessionSnapshot) 
 				active = append(active, member.ID)
 			}
 		}
-		roomID := defaultGameSessionRoomID(snapshot.ID)
+		roomID := defaultTeamSessionRoomID(snapshot.ID)
 		result[roomID] = active
 		return result
 	}
@@ -558,7 +556,7 @@ func partyVoiceRoomID(sessionID string) string {
 	return fmt.Sprintf("%s:Voice", sessionID)
 }
 
-func defaultGameSessionRoomID(sessionID string) string {
+func defaultTeamSessionRoomID(sessionID string) string {
 	return fmt.Sprintf("%s:0", sessionID)
 }
 

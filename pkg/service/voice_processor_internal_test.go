@@ -188,7 +188,7 @@ func TestHelperFunctions(t *testing.T) {
 	if got := partyVoiceRoomID("party-1"); got != "party-1:Voice" {
 		t.Fatalf("unexpected room id %s", got)
 	}
-	if got := defaultGameSessionRoomID("session-1"); got != "session-1:0" {
+	if got := defaultTeamSessionRoomID("session-1"); got != "session-1:0" {
 		t.Fatalf("unexpected default room %s", got)
 	}
 	items := []string{"b", "a", "a"}
@@ -314,7 +314,7 @@ func TestHandleGameSessionCreatedSessionWide(t *testing.T) {
 			"user-2": "puid-2",
 		},
 		createResponse: &voiceclient.CreateRoomTokenResponse{
-			RoomID:        "session-20:0",
+			RoomID:        "session-20",
 			ClientBaseURL: "wss://voice",
 			Participants: []voiceclient.CreateRoomTokenParticipant{
 				{ProductUserID: "puid-1", Token: "token-1"},
@@ -352,7 +352,7 @@ func TestHandleGameSessionCreatedSessionWide(t *testing.T) {
 	if len(client.createCalls) != 1 {
 		t.Fatalf("expected session-wide create call, got %d", len(client.createCalls))
 	}
-	if client.createCalls[0].roomID != "session-20:0" {
+	if client.createCalls[0].roomID != "session-20" {
 		t.Fatalf("expected aggregated room, got %s", client.createCalls[0].roomID)
 	}
 	if got := len(client.createCalls[0].participants); got != 2 {
