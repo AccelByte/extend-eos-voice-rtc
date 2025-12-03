@@ -68,7 +68,7 @@ Populate the following environment variables (either through your shell or `.env
 
 - `AB_BASE_URL` – Base URL for your AccelByte environment.
 - `AB_NAMESPACE` – Namespace whose sessions and parties you plan to synchronise.
-- `AB_CLIENT_ID` / `AB_CLIENT_SECRET` – Confidential OAuth client with access to session, party, and lobby APIs.
+- `AB_CLIENT_ID` / `AB_CLIENT_SECRET` – Confidential OAuth client with access to free-form notification `ADMIN:NAMESPACE:{namespace}:NOTIFICATION [CREATE]`. 
 - `EOS_VOICE_DEPLOYMENT_ID` – Deployment identifier configured for your EOS title (required).
 - `EOS_VOICE_CLIENT_ID` / `EOS_VOICE_CLIENT_SECRET` – OAuth client credentials issued by Epic (required).
 - `EOS_VOICE_NOTIFICATION_TOPIC` – Lobby freeform notification topic that receives voice payloads (defaults to `EOS_VOICE`).
@@ -78,6 +78,7 @@ Populate the following environment variables (either through your shell or `.env
 - `OTEL_EXPORTER_ZIPKIN_ENDPOINT` – Optional Zipkin trace collector endpoint if you want tracing enabled.
 
 > Players must have an EOS Product User ID linked to their AccelByte account. The handler retrieves Product User IDs via the EOS Connect `Query External Accounts` API using `identityProviderId=openId` and `accountId=<AccelByteUserID>`. The service always calls the EOS Voice Web API at `https://api.epicgames.dev/rtc/` and requests tokens from `https://api.epicgames.dev/epic/oauth/v2/token`, so no extra configuration is required for those endpoints.
+
 > You must create a dedicated client inside the Epic Developer Portal (follow the [client policy guide](https://dev.epicgames.com/docs/epic-online-services/client-policy/client-policy-guide)) and ensure the client policy grants the **Connect** and **Voice** permissions so the credentials can call both EOS Connect and EOS Voice APIs.
 
 ## Limitations
