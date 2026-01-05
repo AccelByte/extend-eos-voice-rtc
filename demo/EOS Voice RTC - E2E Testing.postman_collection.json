@@ -1,0 +1,1085 @@
+{
+	"info": {
+		"_postman_id": "21eb5066-c35e-4d47-8671-3a0d146420f9",
+		"name": "EOS Voice RTC - E2E Testing",
+		"description": "End-to-end testing collection for EOS Voice RTC Service Extension.\n\n**Test Flow:**\n1. User Login (Email/Password) → Get User Token\n2. Generate Voice Tokens (Party/Team/Session) using User Token\n3. Admin Login (Client Credentials) → Get Admin Token\n4. Revoke Voice Tokens using Admin Token\n\n**Setup Required:**\n- Update environment variables in Postman\n- Ensure service is running at http://localhost:8000\n- Have valid AccelByte credentials\n- User must be in a party/session for token generation",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "21432124"
+	},
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "1.1 User Login (Email/Password)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response",
+									"var jsonData = pm.response.json();",
+									"",
+									"// Test: Check if response is successful",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has access_token\", function () {",
+									"    pm.expect(jsonData.access_token).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Response has user_id\", function () {",
+									"    pm.expect(jsonData.user_id).to.exist;",
+									"});",
+									"",
+									"// Cache the user access token",
+									"if (jsonData.access_token) {",
+									"    pm.collectionVariables.set(\"user_access_token\", jsonData.access_token);",
+									"    console.log(\"✓ User access token cached\");",
+									"}",
+									"",
+									"// Cache the user ID",
+									"if (jsonData.user_id) {",
+									"    pm.collectionVariables.set(\"user_id\", jsonData.user_id);",
+									"    console.log(\"✓ User ID cached: \" + jsonData.user_id);",
+									"}",
+									"",
+									"// Cache namespace if present",
+									"if (jsonData.namespace) {",
+									"    pm.collectionVariables.set(\"namespace\", jsonData.namespace);",
+									"    console.log(\"✓ Namespace cached: \" + jsonData.namespace);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{client_id}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{client_secret}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "password",
+									"type": "text"
+								},
+								{
+									"key": "username",
+									"value": "{{user_email}}",
+									"description": "User email",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "{{user_password}}",
+									"description": "User password",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/iam/v3/oauth/token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"iam",
+								"v3",
+								"oauth",
+								"token"
+							]
+						},
+						"description": "Login with email and password to get user access token. User doesn't have data of epic PUID in accelbyte. This user must has logged in Epic using AccelByte token.\n\n**Sets:**\n\n- `user_access_token` - Used for voice token generation\n    \n- `user_id` - User identifier\n    \n- `namespace` - Namespace for the user"
+					},
+					"response": []
+				},
+				{
+					"name": "1.2 Admin Login (Client Credentials)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response",
+									"var jsonData = pm.response.json();",
+									"",
+									"// Test: Check if response is successful",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has access_token\", function () {",
+									"    pm.expect(jsonData.access_token).to.exist;",
+									"});",
+									"",
+									"// Cache the admin access token",
+									"if (jsonData.access_token) {",
+									"    pm.collectionVariables.set(\"admin_access_token\", jsonData.access_token);",
+									"    console.log(\"✓ Admin access token cached\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{admin_client_id}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{admin_client_secret}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/iam/v3/oauth/token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"iam",
+								"v3",
+								"oauth",
+								"token"
+							]
+						},
+						"description": "Admin login using client credentials flow.\n\n**Sets:**\n- `admin_access_token` - Used for admin operations like token revocation"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication requests to obtain user and admin tokens"
+		},
+		{
+			"name": "2.1 Session Creation User EOS Connect",
+			"item": [
+				{
+					"name": "2.1.1 Create Party",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// Test: Check if response is successful\r",
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"if (jsonData.id) {\r",
+									"    pm.collectionVariables.set(\"party_id\", jsonData.id);\r",
+									"    console.log(\"✓ User session_id cached\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{user_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"configurationName\": \"{{party_template_name}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/session/v1/public/namespaces/{{namespace}}/party",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"session",
+								"v1",
+								"public",
+								"namespaces",
+								"{{namespace}}",
+								"party"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.1.2 Create Game Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"// Test: Check if response is successful\r",
+									"pm.test(\"Status code is 201\", function () {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"if (jsonData.id) {\r",
+									"    pm.collectionVariables.set(\"session_id\", jsonData.id);\r",
+									"    console.log(\"✓ User session_id cached\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{user_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"configurationName\": \"{{session_template_name}}\",\r\n    \"teams\": [\r\n        {\r\n        \"teamID\": \"0\",\r\n        \"userIDs\": [\r\n            \"{{user_id}}\"\r\n        ]\r\n        }\r\n    ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/session/v1/public/namespaces/{{namespace}}/gamesession",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"session",
+								"v1",
+								"public",
+								"namespaces",
+								"{{namespace}}",
+								"gamesession"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3.1. Voice Token Generation EOS Connect",
+			"item": [
+				{
+					"name": "3.1.1 Generate Party Voice Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response",
+									"var jsonData = pm.response.json();",
+									"",
+									"// Test: Check if response is successful",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has clientBaseUrl\", function () {",
+									"    pm.expect(jsonData.clientBaseUrl).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Response has token\", function () {",
+									"    pm.expect(jsonData.token).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Channel type is PARTY\", function () {",
+									"    pm.expect(jsonData.channelType).to.equal(\"PARTY\");",
+									"});",
+									"",
+									"pm.test(\"Response has roomId\", function () {",
+									"    pm.expect(jsonData.roomId).to.exist;",
+									"});",
+									"",
+									"// Cache the room_id for revocation",
+									"if (jsonData.roomId) {",
+									"    pm.collectionVariables.set(\"party_room_id\", jsonData.roomId);",
+									"    console.log(\"✓ Party room ID cached: \" + jsonData.roomId);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{user_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"hardMuted\": false,\r\n  \"puid\": \"{{eos_puid}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{service_url}}/public/party/{{party_id}}/token",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"public",
+								"party",
+								"{{party_id}}",
+								"token"
+							]
+						},
+						"description": "Generate voice token for party chat.\n\n**Prerequisites:**\n- User must be a member of the party\n- User must have linked Epic Games account\n\n**Path Parameters:**\n- `party_id` - ID of the party\n\n**Query Parameters:**\n- `hardMuted` (optional) - Boolean, default false\n\n**Sets:**\n- `party_room_id` - For token revocation"
+					},
+					"response": []
+				},
+				{
+					"name": "3.1.2 Generate Session Voice Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response",
+									"var jsonData = pm.response.json();",
+									"",
+									"// Test: Check if response is successful",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has clientBaseUrl\", function () {",
+									"    pm.expect(jsonData.clientBaseUrl).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Response has token\", function () {",
+									"    pm.expect(jsonData.token).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Channel type is SESSION\", function () {",
+									"    pm.expect(jsonData.channelType).to.equal(\"SESSION\");",
+									"});",
+									"",
+									"pm.test(\"Response has roomId\", function () {",
+									"    pm.expect(jsonData.roomId).to.exist;",
+									"});",
+									"",
+									"// Cache the room_id for revocation",
+									"if (jsonData.roomId) {",
+									"    pm.collectionVariables.set(\"session_room_id\", jsonData.roomId);",
+									"    console.log(\"✓ Session room ID cached: \" + jsonData.roomId);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{user_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"hardMuted\": false,\r\n  \"puidSource\": \"epic\",\r\n  \"session\": true,\r\n  \"team\": true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{service_url}}/public/session/{{session_id}}/token",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"public",
+								"session",
+								"{{session_id}}",
+								"token"
+							]
+						},
+						"description": "Generate voice token for session-wide chat.\n\n**Prerequisites:**\n- User must be a member of the session\n- User must have linked Epic Games account\n\n**Path Parameters:**\n- `session_id` - ID of the game session\n\n**Query Parameters:**\n- `hardMuted` (optional) - Boolean, default false\n\n**Sets:**\n- `session_room_id` - For token revocation"
+					},
+					"response": []
+				},
+				{
+					"name": "3.1.4 Admin Generate Voice Token (team and session)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response",
+									"var jsonData = pm.response.json();",
+									"",
+									"// Test: Check if response is successful",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has tokens\", function () {",
+									"    pm.expect(jsonData.tokens).to.exist;",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{admin_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"hardMuted\": false,\r\n  \"notify\": true,\r\n  \"session\": true,\r\n  \"team\": true,\r\n  \"allowPendingUsers\": true\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{service_url}}/admin/session/{{session_id}}/token",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"admin",
+								"session",
+								"{{session_id}}",
+								"token"
+							]
+						},
+						"description": "Generate voice token for team-specific chat within a session.\n\n**Prerequisites:**\n- User must be a member of the session\n- User must be assigned to a team\n- User must have linked Epic Games account\n\n**Path Parameters:**\n- `session_id` - ID of the game session\n\n**Query Parameters:**\n- `hardMuted` (optional) - Boolean, default false\n\n**Sets:**\n- `team_room_id` - For token revocation"
+					},
+					"response": []
+				}
+			],
+			"description": "Voice token generation endpoints (requires user access token)"
+		},
+		{
+			"name": "4. Token Revocation (Admin)",
+			"item": [
+				{
+					"name": "3.1 Revoke Party Voice Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test: Check if response is successful",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"console.log(\"✓ Party voice token revoked successfully\");"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{admin_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userIds\": [\"{{user_id}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{service_url}}/admin/room/{{party_room_id}}/token/revoke",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"admin",
+								"room",
+								"{{party_room_id}}",
+								"token",
+								"revoke"
+							]
+						},
+						"description": "Revoke voice tokens for users in a party room.\n\n**Prerequisites:**\n- Admin access token with proper permissions\n- Valid room_id from step 2.1\n\n**Path Parameters:**\n- `room_id` - Room ID from party token generation\n\n**Body:**\n- `userIds` - Array of AccelByte user IDs to revoke"
+					},
+					"response": []
+				},
+				{
+					"name": "3.2 Revoke Session Voice Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test: Check if response is successful",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"console.log(\"✓ Session voice token revoked successfully\");"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{admin_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userIds\": [\"{{user_id}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{service_url}}/admin/room/{{session_room_id}}/token/revoke",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"admin",
+								"room",
+								"{{session_room_id}}",
+								"token",
+								"revoke"
+							]
+						},
+						"description": "Revoke voice tokens for users in a session room.\n\n**Prerequisites:**\n- Admin access token with proper permissions\n- Valid room_id from step 2.2\n\n**Path Parameters:**\n- `room_id` - Room ID from session token generation\n\n**Body:**\n- `userIds` - Array of AccelByte user IDs to revoke"
+					},
+					"response": []
+				},
+				{
+					"name": "3.3 Revoke Team Voice Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test: Check if response is successful",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"console.log(\"✓ Team voice token revoked successfully\");"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{admin_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userIds\": [\"{{user_id}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{service_url}}/admin/room/{{team_room_id}}/token/revoke",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"admin",
+								"room",
+								"{{team_room_id}}",
+								"token",
+								"revoke"
+							]
+						},
+						"description": "Revoke voice tokens for users in a team room.\n\n**Prerequisites:**\n- Admin access token with proper permissions\n- Valid room_id from step 2.3\n\n**Path Parameters:**\n- `room_id` - Room ID from team token generation\n\n**Body:**\n- `userIds` - Array of AccelByte user IDs to revoke"
+					},
+					"response": []
+				}
+			],
+			"description": "Token revocation endpoints (requires admin access token)"
+		},
+		{
+			"name": "5. Error Scenarios",
+			"item": [
+				{
+					"name": "4.1 Party Token - User Not in Party",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test: Check error response",
+									"pm.test(\"Status code is 403 or 400\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([400, 403]);",
+									"});",
+									"",
+									"pm.test(\"Error message exists\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message || jsonData.errorMessage).to.exist;",
+									"});",
+									"",
+									"console.log(\"✓ Error scenario tested: User not in party\");"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{user_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{service_url}}/public/party/non-existent-party-id/token",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"public",
+								"party",
+								"non-existent-party-id",
+								"token"
+							]
+						},
+						"description": "Test error handling when user tries to generate token for a party they're not a member of.\n\n**Expected:**\n- Status: 403 Forbidden\n- Error Code: 40301\n- Message: \"You must join a party before calling this endpoint.\""
+					},
+					"response": []
+				},
+				{
+					"name": "4.2 Session Token - User Not in Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test: Check error response",
+									"pm.test(\"Status code is 403 or 400\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([400, 403]);",
+									"});",
+									"",
+									"pm.test(\"Error message exists\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message || jsonData.errorMessage).to.exist;",
+									"});",
+									"",
+									"console.log(\"✓ Error scenario tested: User not in session\");"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{user_access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{service_url}}/public/session/non-existent-session-id/token",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"public",
+								"session",
+								"non-existent-session-id",
+								"token"
+							]
+						},
+						"description": "Test error handling when user tries to generate token for a session they're not a member of.\n\n**Expected:**\n- Status: 403 Forbidden\n- Error Code: 40302\n- Message: \"You must join a session before calling this endpoint.\""
+					},
+					"response": []
+				},
+				{
+					"name": "4.3 Missing Authorization Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test: Check error response",
+									"pm.test(\"Status code is 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"console.log(\"✓ Error scenario tested: Missing authorization\");"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{service_url}}/public/party/any-party-id/token",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"public",
+								"party",
+								"any-party-id",
+								"token"
+							]
+						},
+						"description": "Test error handling when no authorization token is provided.\n\n**Expected:**\n- Status: 401 Unauthorized"
+					},
+					"response": []
+				}
+			],
+			"description": "Test error scenarios and validation"
+		},
+		{
+			"name": "6. Health Check",
+			"item": [
+				{
+					"name": "5.1 Service Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test: Check if service is healthy",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Service is healthy\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.equal(\"ok\");",
+									"});",
+									"",
+									"console.log(\"✓ Service is healthy and running\");"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{service_url}}/v1/health",
+							"host": [
+								"{{service_url}}"
+							],
+							"path": [
+								"v1",
+								"health"
+							]
+						},
+						"description": "Check if the EOS Voice RTC service is running and healthy."
+					},
+					"response": []
+				}
+			],
+			"description": "Service health check"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://test.accelbyte.io"
+		},
+		{
+			"key": "service_url",
+			"value": "http://localhost:8000"
+		},
+		{
+			"key": "client_id",
+			"value": "YOUR_CLIENT_ID"
+		},
+		{
+			"key": "client_secret",
+			"value": "YOUR_CLIENT_SECRET"
+		},
+		{
+			"key": "admin_client_id",
+			"value": "YOUR_ADMIN_CLIENT_ID"
+		},
+		{
+			"key": "admin_client_secret",
+			"value": "YOUR_ADMIN_CLIENT_SECRET"
+		},
+		{
+			"key": "user_email",
+			"value": "testuser@example.com"
+		},
+		{
+			"key": "user_password",
+			"value": "YOUR_USER_PASSWORD"
+		},
+		{
+			"key": "party_template_name",
+			"value": ""
+		},
+		{
+			"key": "session_template_name",
+			"value": ""
+		},
+		{
+			"key": "party_id",
+			"value": "YOUR_PARTY_ID"
+		},
+		{
+			"key": "session_id",
+			"value": "YOUR_SESSION_ID"
+		},
+		{
+			"key": "user_access_token",
+			"value": ""
+		},
+		{
+			"key": "admin_access_token",
+			"value": ""
+		},
+		{
+			"key": "user_id",
+			"value": ""
+		},
+		{
+			"key": "namespace",
+			"value": ""
+		},
+		{
+			"key": "party_room_id",
+			"value": ""
+		},
+		{
+			"key": "session_room_id",
+			"value": ""
+		},
+		{
+			"key": "team_room_id",
+			"value": ""
+		},
+		{
+			"key": "eos_puid",
+			"value": ""
+		}
+	]
+}

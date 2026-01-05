@@ -1,0 +1,212 @@
+// Copyright (c) 2023-2025 AccelByte Inc. All Rights Reserved.
+// This is licensed software from AccelByte Inc, for limitations
+// and restrictions contact your company contract manager.
+
+syntax = "proto3";
+
+option csharp_namespace = "AccelByte.Extend.EosVoiceRtc";
+option go_package = "extend-eos-voice-rtc/pkg/pb";
+option java_package = "net.accelbyte.extend.eosvoicertc";
+option java_multiple_files = true;
+
+package voice;
+
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+import "permission.proto";
+
+// Channel type enum for voice chat
+enum ChannelType {
+  PARTY = 0;
+  TEAM = 1;
+  SESSION = 2;
+}
+
+// Request message for party token generation
+message PartyTokenRequest {
+  string party_id = 1;     // Path parameter: party ID
+  bool hard_muted = 2;     // Query parameter: optional, default false
+  string puid = 3;         // Optional, use provided Epic PUID
+}
+
+// Request message for session token generation (supports team and/or session)
+message SessionTokenRequest {
+  string session_id = 1;   // Path parameter: session ID
+  bool team = 2;           // Generate team token
+  bool session = 3;        // Generate session token
+  bool hard_muted = 4;     // Query parameter: optional, default false
+  string puid = 5;         // Optional, use provided Epic PUID
+}
+
+// Response message for single EOS token
+message EOSTokenResponse {
+  string client_base_url = 1;  // URL to join the voice room
+  string token = 2;              // Token to join voice room
+  ChannelType channel_type = 3;  // Channel type: PARTY, TEAM, or SESSION
+  string room_id = 4;            // Epic voice chat room ID
+}
+
+// Response message for session token generation (array of tokens)
+message SessionTokenResponse {
+  repeated EOSTokenResponse tokens = 1;  // Array of generated tokens (team and/or session)
+}
+
+// Request message for admin session token generation
+message AdminSessionTokenRequest {
+  string session_id = 1;         // Path parameter: session ID
+  bool team = 2;                 // Generate team voice tokens
+  bool session = 3;              // Generate session voice tokens
+  bool hard_muted = 4;           // Optional, default false
+  bool notify = 5;               // Send notification to users
+  bool allow_pending_users = 6;  // Include users with INVITED status (default: false)
+}
+
+// Response message for a user's token
+message AdminUserTokenResponse {
+  string user_id = 1;                 // AccelByte user ID
+  EOSTokenResponse voice_token = 2; // Voice token response
+}
+
+// Response message for admin session token generation
+message AdminSessionTokenResponse {
+  repeated AdminUserTokenResponse tokens = 1; // Tokens per user
+}
+
+// Request message for revoking tokens
+message RevokeTokenRequest {
+  string room_id = 1;              // Path parameter: room ID
+  repeated string user_ids = 2;    // List of AccelByte user IDs to revoke
+}
+
+// Response message for token revocation (empty for 204 No Content)
+message RevokeTokenResponse {}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+}
+
+service Voice {
+  // Health check endpoint
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse) {
+    option (google.api.http) = {
+      get: "/v1/health"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Health check"
+      description: "Check if the service is healthy"
+      operation_id: "HealthCheck"
+      tags: "Voice"
+    };
+  }
+
+  // Generate Party Voice Token
+  rpc GeneratePartyToken(PartyTokenRequest) returns (EOSTokenResponse) {
+    option (google.api.http) = {
+      post: "/public/party/{party_id}/token"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Generate Party Voice Token"
+      description: "Generate an EOS voice token for a party voice channel. Validates user membership in the party before generating token."
+      operation_id: "Voice_GeneratePartyToken"
+      tags: "Voice"
+      security: {
+        security_requirement: {
+          key: "Bearer"
+          value: {}
+        }
+      }
+    };
+  }
+
+  // Generate Session Voice Token (supports team and/or session tokens)
+  rpc GenerateSessionToken(SessionTokenRequest) returns (SessionTokenResponse) {
+    option (google.api.http) = {
+      post: "/public/session/{session_id}/token"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Generate Session Voice Token"
+      description: "Generate EOS voice tokens for session and/or team channels. Set 'team' and/or 'session' flags to specify which tokens to generate. Returns an array of tokens based on requested types."
+      operation_id: "Voice_GenerateSessionToken"
+      tags: "Voice"
+      security: {
+        security_requirement: {
+          key: "Bearer"
+          value: {}
+        }
+      }
+    };
+  }
+
+  // Generate Admin Session Voice Tokens
+  rpc GenerateAdminSessionToken(AdminSessionTokenRequest) returns (AdminSessionTokenResponse) {
+    option (permission.resource) = "ADMIN:NAMESPACE:{namespace}:VOICE";
+    option (permission.action) = CREATE;
+    option (google.api.http) = {
+      post: "/admin/session/{session_id}/token"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Generate Admin Session Voice Tokens"
+      description: "Generate EOS voice tokens for all users in a session. Can include session and/or team tokens, and optionally send per-user notifications. Set allow_pending_users=true to include users who have been invited but not yet joined (status: INVITED). Requires ADMIN:NAMESPACE:{namespace}:VOICE [CREATE] permission."
+      operation_id: "Voice_GenerateAdminSessionToken"
+      tags: "Voice"
+      security: {
+        security_requirement: {
+          key: "Bearer"
+          value: {}
+        }
+      }
+    };
+  }
+
+  // Revoke Voice Token (Admin)
+  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse) {
+    option (permission.resource) = "ADMIN:NAMESPACE:{namespace}:VOICE";
+    option (permission.action) = DELETE;
+    option (google.api.http) = {
+      post: "/admin/room/{room_id}/token/revoke"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Revoke Voice Token"
+      description: "Revoke voice tokens for specified users in a room. Admin endpoint requiring ADMIN:NAMESPACE:{namespace}:VOICE [DELETE] permission."
+      operation_id: "Voice_RevokeToken"
+      tags: "Voice"
+      security: {
+        security_requirement: {
+          key: "Bearer"
+          value: {}
+        }
+      }
+    };
+  }
+}
+
+// OpenAPI options for the entire API.
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "EOS Voice RTC Service API";
+    version: "1.0";
+  };
+  base_path: "/eos-voice";
+
+  tags: {
+    name: "Voice";
+    description: "EOS Voice RTC endpoints for generating and managing voice tokens";
+  };
+
+  security_definitions: {
+    security: {
+      key: "Bearer";
+      value: {
+        type: TYPE_API_KEY;
+        in: IN_HEADER;
+        name: "Authorization";
+      }
+    }
+  };
+};

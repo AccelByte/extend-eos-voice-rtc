@@ -1,0 +1,428 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "EOS Voice RTC Service API",
+    "version": "1.0"
+  },
+  "tags": [
+    {
+      "name": "Voice",
+      "description": "EOS Voice RTC endpoints for generating and managing voice tokens"
+    }
+  ],
+  "basePath": "/eos-voice",
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/admin/room/{roomId}/token/revoke": {
+      "post": {
+        "summary": "Revoke Voice Token",
+        "description": "Revoke voice tokens for specified users in a room. Admin endpoint requiring ADMIN:NAMESPACE:{namespace}:VOICE [DELETE] permission.",
+        "operationId": "Voice_RevokeToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/voiceRevokeTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "roomId",
+            "description": "Path parameter: room ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceRevokeTokenBody"
+            }
+          }
+        ],
+        "tags": [
+          "Voice"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/admin/session/{sessionId}/token": {
+      "post": {
+        "summary": "Generate Admin Session Voice Tokens",
+        "description": "Generate EOS voice tokens for all users in a session. Can include session and/or team tokens, and optionally send per-user notifications. Set allow_pending_users=true to include users who have been invited but not yet joined (status: INVITED). Requires ADMIN:NAMESPACE:{namespace}:VOICE [CREATE] permission.",
+        "operationId": "Voice_GenerateAdminSessionToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/voiceAdminSessionTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "description": "Path parameter: session ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceGenerateAdminSessionTokenBody"
+            }
+          }
+        ],
+        "tags": [
+          "Voice"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/public/party/{partyId}/token": {
+      "post": {
+        "summary": "Generate Party Voice Token",
+        "description": "Generate an EOS voice token for a party voice channel. Validates user membership in the party before generating token.",
+        "operationId": "Voice_GeneratePartyToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/voiceEOSTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "partyId",
+            "description": "Path parameter: party ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceGeneratePartyTokenBody"
+            }
+          }
+        ],
+        "tags": [
+          "Voice"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/public/session/{sessionId}/token": {
+      "post": {
+        "summary": "Generate Session Voice Token",
+        "description": "Generate EOS voice tokens for session and/or team channels. Set 'team' and/or 'session' flags to specify which tokens to generate. Returns an array of tokens based on requested types.",
+        "operationId": "Voice_GenerateSessionToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/voiceSessionTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "description": "Path parameter: session ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceGenerateSessionTokenBody"
+            }
+          }
+        ],
+        "tags": [
+          "Voice"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Check if the service is healthy",
+        "operationId": "HealthCheck",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/voiceHealthCheckResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Voice"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "VoiceGenerateAdminSessionTokenBody": {
+      "type": "object",
+      "properties": {
+        "team": {
+          "type": "boolean",
+          "title": "Generate team voice tokens"
+        },
+        "session": {
+          "type": "boolean",
+          "title": "Generate session voice tokens"
+        },
+        "hardMuted": {
+          "type": "boolean",
+          "title": "Optional, default false"
+        },
+        "notify": {
+          "type": "boolean",
+          "title": "Send notification to users"
+        },
+        "allowPendingUsers": {
+          "type": "boolean",
+          "title": "Include users with INVITED status (default: false)"
+        }
+      },
+      "title": "Request message for admin session token generation"
+    },
+    "VoiceGeneratePartyTokenBody": {
+      "type": "object",
+      "properties": {
+        "hardMuted": {
+          "type": "boolean",
+          "title": "Query parameter: optional, default false"
+        },
+        "puid": {
+          "type": "string",
+          "title": "Optional, use provided Epic PUID"
+        }
+      },
+      "title": "Request message for party token generation"
+    },
+    "VoiceGenerateSessionTokenBody": {
+      "type": "object",
+      "properties": {
+        "team": {
+          "type": "boolean",
+          "title": "Generate team token"
+        },
+        "session": {
+          "type": "boolean",
+          "title": "Generate session token"
+        },
+        "hardMuted": {
+          "type": "boolean",
+          "title": "Query parameter: optional, default false"
+        },
+        "puid": {
+          "type": "string",
+          "title": "Optional, use provided Epic PUID"
+        }
+      },
+      "title": "Request message for session token generation (supports team and/or session)"
+    },
+    "VoiceRevokeTokenBody": {
+      "type": "object",
+      "properties": {
+        "userIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "List of AccelByte user IDs to revoke"
+        }
+      },
+      "title": "Request message for revoking tokens"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "voiceAdminSessionTokenResponse": {
+      "type": "object",
+      "properties": {
+        "tokens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/voiceAdminUserTokenResponse"
+          },
+          "title": "Tokens per user"
+        }
+      },
+      "title": "Response message for admin session token generation"
+    },
+    "voiceAdminUserTokenResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "title": "AccelByte user ID"
+        },
+        "voiceToken": {
+          "$ref": "#/definitions/voiceEOSTokenResponse",
+          "title": "Voice token response"
+        }
+      },
+      "title": "Response message for a user's token"
+    },
+    "voiceChannelType": {
+      "type": "string",
+      "enum": [
+        "PARTY",
+        "TEAM",
+        "SESSION"
+      ],
+      "default": "PARTY",
+      "title": "Channel type enum for voice chat"
+    },
+    "voiceEOSTokenResponse": {
+      "type": "object",
+      "properties": {
+        "clientBaseUrl": {
+          "type": "string",
+          "title": "URL to join the voice room"
+        },
+        "token": {
+          "type": "string",
+          "title": "Token to join voice room"
+        },
+        "channelType": {
+          "$ref": "#/definitions/voiceChannelType",
+          "title": "Channel type: PARTY, TEAM, or SESSION"
+        },
+        "roomId": {
+          "type": "string",
+          "title": "Epic voice chat room ID"
+        }
+      },
+      "title": "Response message for single EOS token"
+    },
+    "voiceHealthCheckResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "voiceRevokeTokenResponse": {
+      "type": "object",
+      "title": "Response message for token revocation (empty for 204 No Content)"
+    },
+    "voiceSessionTokenResponse": {
+      "type": "object",
+      "properties": {
+        "tokens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/voiceEOSTokenResponse"
+          },
+          "title": "Array of generated tokens (team and/or session)"
+        }
+      },
+      "title": "Response message for session token generation (array of tokens)"
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}
