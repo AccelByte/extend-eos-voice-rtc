@@ -82,8 +82,7 @@ The service uses AccelByte IAM's permission-based authorization to secure admin 
 ### Public Endpoints (User Tokens - Works in Shared & Private Cloud)
 
 - `POST /public/party/{party_id}/token` - No special permissions required
-- `POST /public/session/{session_id}/token` - No special permissions required
-- `POST /public/session/{session_id}/team/token` - No special permissions required
+- `POST /public/session/{session_id}/token` - No special permissions required (use `team` and `session` query params to control which tokens are generated)
 
 ### Admin Endpoints (Admin Tokens with Permissions - **Private Cloud Only**)
 

@@ -126,9 +126,8 @@ You'll need the following tools installed on Windows 11 WSL2, Linux Ubuntu 22.04
   - IAM -> Roles (Read)
   - Basic -> Namespace (Read)
   - Session -> Game Session (Read)
-  - Lobby -> Party (Read)
+  - Session -> Admin Party (Read)
   - Lobby -> Notification (Create)
-  - IAM -> User Platform Link (Read)
 
 ---
 
@@ -268,7 +267,7 @@ EPIC_DEPLOYMENT_ID=xxxxxxxxxx                 # Epic RTC Deployment ID
 EPIC_BASE_URL=https://api.epicgames.dev       # Epic API base URL (default)
 
 # Optional Configuration
-REFRESH_INTERVAL=600                          # Epic token refresh interval in seconds (default: 600)
+REFRESH_INTERVAL=600                          # AccelByte IAM token validator refresh interval in seconds (default: 600); Epic OAuth token refreshes every 50 minutes independently
 LOG_LEVEL=info                                # Log level: debug, info, warn, error
 OTEL_EXPORTER_ZIPKIN_ENDPOINT=                # OpenTelemetry Zipkin endpoint (optional)
 ```

@@ -1,5 +1,7 @@
 # extend-eos-voice-rtc
 
+An [Extend Service Extension](https://docs.accelbyte.io/gaming-services/services/extend/service-extension/) app that integrates **Epic Games EOS Voice RTC** with **AccelByte Gaming Services (AGS)**. It lets game clients request voice chat tokens for parties, sessions, and teams — all secured by AccelByte IAM.
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -122,199 +124,252 @@ sequenceDiagram
     deactivate EOS
 ```
 
-`AccelByte Gaming Services` (AGS) capabilities can be enhanced using 
-`Extend Service Extension` apps. An `Extend Service Extension` app is a RESTful 
-web service created using a stack that includes a `gRPC Server` and the 
-[gRPC Gateway](https://github.com/grpc-ecosystem/grpc-gateway?tab=readme-ov-file#about).
-
-## Overview
-
-This repository implements an `Extend Service Extension` app in `Go` that provides
-**EOS Voice RTC** (Real-Time Communication) integration for AccelByte Gaming Services (AGS). 
-It enables voice chat functionality by generating Epic Games voice tokens for party, session, 
-and team-based voice channels.
-
-### Key Features
-
-- **Party Voice Chat**: Generate voice tokens for party-wide communication
-- **Session/Team Voice Chat**: Generate voice tokens for session-wide or team-specific channels (supports both via `team` and `session` flags)
-- **Admin Session Tokens**: Generate voice tokens for all users in a session (team and/or session)
-  - **Pending User Support**: Generate tokens for invited users who haven't joined yet via `allow_pending_users` flag
-- **Admin Token Revocation**: Revoke voice access for specific users in any room
-- **Epic Integration**: Map AccelByte User IDs to Epic PUIDs via Epic Connect (or pass `puid` per request)
-- **Notifications**: Send per-user freeform notifications with voice token payloads
-- **Token Caching**: Auto-refresh Epic OAuth tokens every 50 minutes
-- **Fail-Fast Validation**: Validates party/session membership before calling Epic APIs
-- **Observability**: Built-in metrics, tracing, and structured logging
-
-### Endpoints
-
-| Method | Endpoint | Description | Auth | Required Permission | Availability |
-|--------|----------|-------------|------|---------------------|--------------|
-| GET | `/v1/health` | Health check | None | None | Shared & Private Cloud |
-| POST | `/public/party/{party_id}/token` | Generate party voice token | User | None | Shared & Private Cloud |
-| POST | `/public/session/{session_id}/token` | Generate session and/or team voice tokens (supports `team` and `session` flags) | User | None | Shared & Private Cloud |
-| POST | `/admin/session/{session_id}/token` | Generate session/team tokens for all users | Admin | `ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` | **Private Cloud Only** |
-| POST | `/admin/room/{room_id}/token/revoke` | Revoke user tokens in room | Admin | `ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` | **Private Cloud Only** |
-
-> :warning: **Admin endpoints require AGS Private Cloud**: Custom permissions are not supported in Shared Cloud, so admin endpoints will return `403 Permission Denied` in Shared Cloud environments.
-
 ---
 
 ## Quick Start
 
-### 1. Prerequisites
-
-Ensure you have the following installed and configured:
-
-- **Development Tools**: Bash, Make, Docker, Go v1.24, Postman, extend-helper-cli
-- **AccelByte Setup**: AGS environment, namespace, OAuth clients, permissions
-- **Epic Setup**: Epic organization, OAuth client, deployment ID, RTC services enabled
-- **Epic Integration**: Configure EOS Connect or EAS account linking
-
-📖 **Detailed instructions**: [Setup Guide](docs/setup.md#prerequisites)
-
-### 2. Configure Environment
-
-1. Copy the environment template:
-   ```bash
-   cp .env.template .env
-   ```
-
-2. Edit `.env` and fill in your credentials:
-   ```bash
-   # AccelByte Configuration
-   AB_BASE_URL=https://test.accelbyte.io
-   AB_CLIENT_ID=xxxxxxxxxx
-   AB_CLIENT_SECRET=xxxxxxxxxx
-   AB_NAMESPACE=xxxxxxxxxx
-   BASE_PATH=/eos-voice
-
-   # Epic Games Configuration
-   EPIC_CLIENT_ID=xxxxxxxxxx
-   EPIC_CLIENT_SECRET=xxxxxxxxxx
-   EPIC_DEPLOYMENT_ID=xxxxxxxxxx
-   EPIC_BASE_URL=https://api.epicgames.dev
-   ```
-
-📖 **Full configuration reference**: [Setup Guide](docs/setup.md#environment-configuration)
-
-### 3. Build and Run
+### Step 1 — Clone the Repository
 
 ```bash
-# Build the service
-make build
-
-# Run with Docker Compose
-docker compose up --build
+git clone https://github.com/AccelByte/extend-eos-voice-rtc-ab.git
+cd extend-eos-voice-rtc-ab
 ```
-
-The service will be available at:
-- **HTTP Gateway**: `http://localhost:8000`
-- **Swagger UI**: `http://localhost:8000/eos-voice/apidocs/`
-- **Health Check**: `http://localhost:8000/eos-voice/v1/health`
-
-### 4. Test
-
-**Option A: Automated Testing with Postman**
-
-1. Import `demo/EOS Voice RTC - E2E Testing.postman_collection.json` into Postman
-2. Configure environment variables
-3. Run the test suite
-
-📖 **Detailed testing guide**: [TESTING_GUIDE.md](TESTING_GUIDE.md)
-
-**Option B: Manual Testing with Swagger UI**
-
-1. Open `http://localhost:8000/eos-voice/apidocs/`
-2. Get an access token (see [Operations Guide](docs/operations.md#manual-testing-with-swagger-ui))
-3. Click "Authorize" and enter: `Bearer <your_access_token>`
-4. Test the endpoints
-
-### 5. Deploy
-
-Deploy to AccelByte Gaming Services:
-
-1. Create an Extend Service Extension app in AGS Admin Portal
-2. Configure environment secrets and variables
-3. Build and push the container image:
-   ```bash
-   extend-helper-cli image-upload --login --namespace <namespace> --app <app-name> --image-tag v0.0.1
-   ```
-4. Deploy the image from the Admin Portal
-
-📖 **Deployment guide**: [Setup Guide](docs/setup.md#deployment)
 
 ---
 
-## Unreal Engine Integration
+### Step 2 — Create an AccelByte IAM Client (Service)
 
-We have an example Unreal plugin that integrates with this app. You can check it out here:
-[https://github.com/AccelByte/accelbyte-eos-voice-unreal](https://github.com/AccelByte/accelbyte-eos-voice-unreal)
+This OAuth client is used by the service itself to validate tokens and call AGS APIs.
+
+1. Go to **AGS Admin Portal → IAM → OAuth Clients → Create**
+2. Set type to **Confidential**, grant type to **Client Credentials**
+3. Add the following permissions:
+
+   **AGS Private Cloud:**
+   | Permission | Action |
+   |---|---|
+   | `ADMIN:ROLE` | READ |
+   | `ADMIN:NAMESPACE:{namespace}:NAMESPACE` | READ |
+   | `ADMIN:NAMESPACE:{namespace}:SESSION` | READ |
+   | `ADMIN:NAMESPACE:{namespace}:PARTY` | READ |
+   | `ADMIN:NAMESPACE:{namespace}:NOTIFICATION` | CREATE |
+
+   **AGS Shared Cloud:**
+   | Permission | Action |
+   |---|---|
+   | IAM → Roles | Read |
+   | Basic → Namespace | Read |
+   | Session → Game Session | Read |
+   | Session -> Admin Party | Read |
+   | Lobby → Notification | Create |
+
+4. Save the **Client ID** and **Client Secret**.
+
+---
+
+### Step 3 — Set Up Epic Games
+
+1. **Create an OAuth Client** in the [Epic Developer Portal](https://dev.epicgames.com/portal) with `client_credentials` grant. Save the **Client ID** and **Client Secret**.
+2. **Get your Deployment ID** from the Epic portal for your RTC product.
+3. **Set up account linking** (choose one):
+   - **EOS Connect** (recommended for EOS SDK games): Link AccelByte as an OpenID provider in Epic → **Product Settings → Identity Providers**. Users link during login via `EOS_Connect_Login`. You can then omit `puid` in requests.
+   - **Explicit PUID** (for Epic Launcher / EAS games): Pass `puid` explicitly on every token request. No Epic-side configuration needed.
+
+   > See [Architecture Guide](docs/architecture.md#puid-resolution) for a detailed comparison.
+
+---
+
+### Step 4 — Configure Environment
+
+```bash
+cp .env.template .env
+```
+
+Edit `.env` and fill in your credentials:
+
+```bash
+# AccelByte
+AB_BASE_URL=https://test.accelbyte.io
+AB_CLIENT_ID=<service-client-id>
+AB_CLIENT_SECRET=<service-client-secret>
+AB_NAMESPACE=<your-namespace>
+BASE_PATH=/eos-voice
+
+# Epic Games
+EPIC_CLIENT_ID=<epic-client-id>
+EPIC_CLIENT_SECRET=<epic-client-secret>
+EPIC_DEPLOYMENT_ID=<epic-deployment-id>
+EPIC_BASE_URL=https://api.epicgames.dev
+```
+
+---
+
+### Step 5 — Run the Service
+
+```bash
+docker compose up --build
+```
+
+The service starts at:
+- **HTTP API**: `http://localhost:8000`
+- **Swagger UI**: `http://localhost:8000/eos-voice/apidocs/`
+- **Health check**: `http://localhost:8000/eos-voice/v1/health`
+
+Verify it's running:
+
+```bash
+curl http://localhost:8000/eos-voice/v1/health
+# {"status":"ok"}
+```
+
+---
+
+### Step 6 — Get an Access Token
+
+Use your game client OAuth credentials to get a user token:
+
+```bash
+curl -s -X POST "https://test.accelbyte.io/iam/v3/oauth/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -u "<client_id>:<client_secret>" \
+  -d "grant_type=password&username=<user_email>&password=<user_password>" \
+  | jq -r '.access_token'
+```
+
+Save the returned token as `USER_TOKEN`.
+
+---
+
+### Step 7 — Test the Endpoints
+
+#### Generate a Party Voice Token
+
+```bash
+curl -s -X POST "http://localhost:8000/eos-voice/public/party/<party_id>/token" \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+Expected response:
+
+```json
+{
+  "channel_base_url": "wss://voice.epicgames.com",
+  "token": "eyJ0eXAiOiJKV1Qi...",
+  "channel_type": "PARTY",
+  "room_id": "<party_id>:Voice"
+}
+```
+
+#### Generate Session and/or Team Voice Tokens
+
+```bash
+# Session-only token
+curl -s -X POST "http://localhost:8000/eos-voice/public/session/<session_id>/token?session=true" \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H "Content-Type: application/json"
+
+# Team-only token
+curl -s -X POST "http://localhost:8000/eos-voice/public/session/<session_id>/token?team=true" \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H "Content-Type: application/json"
+
+# Both session + team tokens in one request
+curl -s -X POST "http://localhost:8000/eos-voice/public/session/<session_id>/token?session=true&team=true" \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+#### Revoke a User's Voice Token (Admin — Private Cloud only)
+
+First get an admin token using `client_credentials` grant (requires `VOICE [DELETE]` permission):
+
+```bash
+ADMIN_TOKEN=$(curl -s -X POST "https://test.accelbyte.io/iam/v3/oauth/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -u "<admin_client_id>:<admin_client_secret>" \
+  -d "grant_type=client_credentials" \
+  | jq -r '.access_token')
+
+curl -s -X POST "http://localhost:8000/eos-voice/admin/room/<room_id>/token/revoke" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"userIds": ["<user_id>"]}'
+```
+
+> `room_id` follows the pattern `{party_id}:Voice`, `{session_id}:Voice`, or `{session_id}:{team_id}`.
+
+---
+
+### Step 8 — Deploy to AGS
+
+1. **Create an Extend Service Extension app** in the AGS Admin Portal.
+2. **Set environment secrets** (`AB_CLIENT_ID`, `AB_CLIENT_SECRET`, `EPIC_CLIENT_ID`, `EPIC_CLIENT_SECRET`, `EPIC_DEPLOYMENT_ID`) and variables (`BASE_PATH`, `EPIC_BASE_URL`).
+3. **Build and push the image**:
+
+   ```bash
+   extend-helper-cli image-upload --login \
+     --namespace <namespace> \
+     --app <app-name> \
+     --image-tag v0.0.1
+   ```
+
+4. **Deploy** from the **App Detail → Image Version History** page.
+
+> See [Setup Guide](docs/setup.md#deployment) for full details.
+
+---
+
+## API Reference
+
+| Method | Endpoint | Auth | Availability |
+|--------|----------|------|--------------|
+| GET | `/v1/health` | None | All |
+| POST | `/public/party/{party_id}/token` | User token | Shared & Private Cloud |
+| POST | `/public/session/{session_id}/token` | User token | Shared & Private Cloud |
+| POST | `/admin/session/{session_id}/token` | Admin token + `VOICE [CREATE]` | **Private Cloud only** |
+| POST | `/admin/room/{room_id}/token/revoke` | Admin token + `VOICE [DELETE]` | **Private Cloud only** |
+
+> Admin endpoints require custom `VOICE` permissions that are not available in AGS Shared Cloud.
 
 ---
 
 ## Documentation
 
-- **[Setup Guide](docs/setup.md)** - Prerequisites, configuration, and deployment
-- **[Architecture Guide](docs/architecture.md)** - Technical design and decisions
-- **[Operations Guide](docs/operations.md)** - Testing, monitoring, errors, and troubleshooting
-- **[Testing Guide](docs/testing_guide.md)** - Postman E2E testing
-- **[Dev Container](docs/devcontainer.md)** - Container-based development
+- **[Setup Guide](docs/setup.md)** — Prerequisites, configuration, and deployment
+- **[Architecture Guide](docs/architecture.md)** — Technical design, PUID resolution, and decisions
+- **[Operations Guide](docs/operations.md)** — Testing, monitoring, error codes, and troubleshooting
+- **[Testing Guide](docs/testing_guide.md)** — Postman E2E testing
+- **[Dev Container](docs/devcontainer.md)** — Container-based development
+
+---
+
+## Unreal Engine Integration
+
+See the example Unreal plugin: [accelbyte-eos-voice-unreal](https://github.com/AccelByte/accelbyte-eos-voice-unreal)
 
 ---
 
 ## Project Structure
 
-The gRPC server is initialized in `main.go` and exposed as REST via gRPC Gateway.
-Requests pass through `authServerInterceptor.go` for access token and permission
-validation before reaching EOS voice handlers in `pkg/service/eosService.go`.
-Protobuf definitions live in `pkg/proto/service.proto` and generate stubs in `pkg/pb`.
-
-```shell
+```
 .
-├── main.go   # App starts here
-├── pkg
-│   ├── common
-│   │   ├── authServerInterceptor.go    # gRPC server interceptor for access token authentication and authorization
-│   │   ├── ...
-│   ├── pb    # gRPC stubs generated from gRPC server protobuf
-│   │   └── ...
-│   ├── proto
-│   │   ├── service.proto     # gRPC server protobuf with additional options for exposing as RESTful web service
-│   │   └── ...
-│   ├── service
-│   │   ├── eosService.go     # EOS Voice RTC service handlers
-│   │   └── ...
-│   └── ...
-└── ...
+├── main.go                              # Entry point
+├── pkg/
+│   ├── common/
+│   │   ├── authServerInterceptor.go    # Token validation and permission checks
+│   │   └── gateway.go                  # gRPC Gateway (REST bridge) and Swagger UI
+│   ├── proto/service.proto             # Protobuf definitions (run `make proto` to generate)
+│   ├── pb/                             # Generated gRPC stubs
+│   └── service/
+│       ├── eosService.go              # Main handlers (party, session, admin, revoke)
+│       ├── epicClient.go              # Epic Games API client (OAuth, PUID lookup, RTC tokens)
+│       ├── sessionValidator.go        # AccelByte party/session membership validation
+│       └── errors.go                  # Custom error types and HTTP error parsing
+├── gateway/apidocs/                    # Generated Swagger JSON
+├── demo/                               # Postman collections
+└── docs/                               # Detailed documentation
 ```
-
-📖 **Architecture details**: [Architecture Guide](docs/architecture.md)
-
----
-
-## Building
-
-To build this app, use the following command.
-
-```shell
-make build
-```
-
-The build output will be available in `.output` directory.
-
----
-
-## Running
-
-To (build and) run this app in a container, use the following command.
-
-```shell
-docker compose up --build
-```
-
-📖 **Configuration and deployment**: [Setup Guide](docs/setup.md)
 
 ---
 
