@@ -143,7 +143,7 @@ service Voice {
 
   // Generate Admin Session Voice Tokens
   rpc GenerateAdminSessionToken(AdminSessionTokenRequest) returns (AdminSessionTokenResponse) {
-    option (permission.resource) = "ADMIN:NAMESPACE:{namespace}:VOICE";
+    option (permission.resource) = "CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE";
     option (permission.action) = CREATE;
     option (google.api.http) = {
       post: "/admin/session/{session_id}/token"
@@ -151,7 +151,7 @@ service Voice {
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Generate Admin Session Voice Tokens"
-      description: "Generate EOS voice tokens for all users in a session. Can include session and/or team tokens, and optionally send per-user notifications. Set allow_pending_users=true to include users who have been invited but not yet joined (status: INVITED). Requires ADMIN:NAMESPACE:{namespace}:VOICE [CREATE] permission."
+      description: "Generate EOS voice tokens for all users in a session. Can include session and/or team tokens, and optionally send per-user notifications. Set allow_pending_users=true to include users who have been invited but not yet joined (status: INVITED). Requires CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [CREATE] permission."
       operation_id: "Voice_GenerateAdminSessionToken"
       tags: "Voice"
       security: {
@@ -165,7 +165,7 @@ service Voice {
 
   // Revoke Voice Token (Admin)
   rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse) {
-    option (permission.resource) = "ADMIN:NAMESPACE:{namespace}:VOICE";
+    option (permission.resource) = "CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE";
     option (permission.action) = DELETE;
     option (google.api.http) = {
       post: "/admin/room/{room_id}/token/revoke"
@@ -173,7 +173,7 @@ service Voice {
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Revoke Voice Token"
-      description: "Revoke voice tokens for specified users in a room. Admin endpoint requiring ADMIN:NAMESPACE:{namespace}:VOICE [DELETE] permission."
+      description: "Revoke voice tokens for specified users in a room. Admin endpoint requiring CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE] permission."
       operation_id: "Voice_RevokeToken"
       tags: "Voice"
       security: {

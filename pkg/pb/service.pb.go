@@ -732,7 +732,7 @@ const file_service_proto_rawDesc = "" +
 	"\vChannelType\x12\t\n" +
 	"\x05PARTY\x10\x00\x12\b\n" +
 	"\x04TEAM\x10\x01\x12\v\n" +
-	"\aSESSION\x10\x022\xa7\x0e\n" +
+	"\aSESSION\x10\x022\xc3\x0e\n" +
 	"\x05Voice\x12\x9e\x01\n" +
 	"\vHealthCheck\x12\x19.voice.HealthCheckRequest\x1a\x1a.voice.HealthCheckResponse\"X\x92AC\n" +
 	"\x05Voice\x12\fHealth check\x1a\x1fCheck if the service is healthy*\vHealthCheck\x82\xd3\xe4\x93\x02\f\x12\n" +
@@ -746,17 +746,17 @@ const file_service_proto_rawDesc = "" +
 	"\x05Voice\x12\x1cGenerate Session Voice Token\x1a\xb7\x01Generate EOS voice tokens for session and/or team channels. Set 'team' and/or 'session' flags to specify which tokens to generate. Returns an array of tokens based on requested types.*\x1aVoice_GenerateSessionTokenb\f\n" +
 	"\n" +
 	"\n" +
-	"\x06Bearer\x12\x00\x82\xd3\xe4\x93\x02':\x01*\"\"/public/session/{session_id}/token\x12\xcb\x04\n" +
-	"\x19GenerateAdminSessionToken\x12\x1f.voice.AdminSessionTokenRequest\x1a .voice.AdminSessionTokenResponse\"\xea\x03\x92A\x91\x03\n" +
-	"\x05Voice\x12#Generate Admin Session Voice Tokens\x1a\xb3\x02Generate EOS voice tokens for all users in a session. Can include session and/or team tokens, and optionally send per-user notifications. Set allow_pending_users=true to include users who have been invited but not yet joined (status: INVITED). Requires ADMIN:NAMESPACE:{namespace}:VOICE [CREATE] permission.*\x1fVoice_GenerateAdminSessionTokenb\f\n" +
+	"\x06Bearer\x12\x00\x82\xd3\xe4\x93\x02':\x01*\"\"/public/session/{session_id}/token\x12\xd9\x04\n" +
+	"\x19GenerateAdminSessionToken\x12\x1f.voice.AdminSessionTokenRequest\x1a .voice.AdminSessionTokenResponse\"\xf8\x03\x92A\x98\x03\n" +
+	"\x05Voice\x12#Generate Admin Session Voice Tokens\x1a\xba\x02Generate EOS voice tokens for all users in a session. Can include session and/or team tokens, and optionally send per-user notifications. Set allow_pending_users=true to include users who have been invited but not yet joined (status: INVITED). Requires CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [CREATE] permission.*\x1fVoice_GenerateAdminSessionTokenb\f\n" +
 	"\n" +
 	"\n" +
-	"\x06Bearer\x12\x00\x8a\xb5\x18!ADMIN:NAMESPACE:{namespace}:VOICE\x90\xb5\x18\x01\x82\xd3\xe4\x93\x02&:\x01*\"!/admin/session/{session_id}/token\x12\xe2\x02\n" +
-	"\vRevokeToken\x12\x19.voice.RevokeTokenRequest\x1a\x1a.voice.RevokeTokenResponse\"\x9b\x02\x92A\xc1\x01\n" +
-	"\x05Voice\x12\x12Revoke Voice Token\x1a\x82\x01Revoke voice tokens for specified users in a room. Admin endpoint requiring ADMIN:NAMESPACE:{namespace}:VOICE [DELETE] permission.*\x11Voice_RevokeTokenb\f\n" +
+	"\x06Bearer\x12\x00\x8a\xb5\x18(CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE\x90\xb5\x18\x01\x82\xd3\xe4\x93\x02&:\x01*\"!/admin/session/{session_id}/token\x12\xf0\x02\n" +
+	"\vRevokeToken\x12\x19.voice.RevokeTokenRequest\x1a\x1a.voice.RevokeTokenResponse\"\xa9\x02\x92A\xc8\x01\n" +
+	"\x05Voice\x12\x12Revoke Voice Token\x1a\x89\x01Revoke voice tokens for specified users in a room. Admin endpoint requiring CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE] permission.*\x11Voice_RevokeTokenb\f\n" +
 	"\n" +
 	"\n" +
-	"\x06Bearer\x12\x00\x8a\xb5\x18!ADMIN:NAMESPACE:{namespace}:VOICE\x90\xb5\x18\b\x82\xd3\xe4\x93\x02':\x01*\"\"/admin/room/{room_id}/token/revokeB\xfe\x01\x92A\x9a\x01\x12 \n" +
+	"\x06Bearer\x12\x00\x8a\xb5\x18(CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE\x90\xb5\x18\b\x82\xd3\xe4\x93\x02':\x01*\"\"/admin/room/{room_id}/token/revokeB\xfe\x01\x92A\x9a\x01\x12 \n" +
 	"\x19EOS Voice RTC Service API2\x031.0\"\n" +
 	"/eos-voiceZ\x1f\n" +
 	"\x1d\n" +

@@ -19,14 +19,12 @@ You need the following AccelByte resources:
   - `client_id` - OAuth client ID with password grant
   - `client_secret` - OAuth client secret
 
-- **Admin Client Credentials** (for admin operations - **Private Cloud Only**)
+- **Admin Client Credentials** (for admin operations)
   - `admin_client_id` - OAuth client ID with client credentials grant
   - `admin_client_secret` - OAuth client secret
-  - Required permissions (custom permissions, Private Cloud only):
-    - `ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` - for generating admin session tokens
-    - `ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` - for revoking tokens
-  
-  > :warning: **Shared Cloud Note**: Admin endpoints require custom VOICE permissions which are not supported in AGS Shared Cloud. Admin endpoint tests will only work in Private Cloud environments.
+  - Required permissions:
+    - `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` - for generating admin session tokens
+    - `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` - for revoking tokens
 
 - **Test User Account**
   - `user_email` - Email of test user
@@ -380,7 +378,7 @@ Error: connect ECONNREFUSED 127.0.0.1:8000
 403 Forbidden on revoke endpoint
 ```
 **Solution:**
-- Verify admin client has `ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` permission
+- Verify admin client has `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` permission
 - Check namespace matches user's namespace
 - Use correct admin_client_id/secret
 

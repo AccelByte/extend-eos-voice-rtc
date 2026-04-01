@@ -42,7 +42,7 @@ The recommended way to test this service is using the provided Postman collectio
    session_id: <session_id>                 # Active session ID
    ```
 
-   > :exclamation: **For testing admin endpoints**: The `admin_client_id` OAuth client must have `ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` and `ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` permissions (Private Cloud only).
+   > :exclamation: **For testing admin endpoints**: The `admin_client_id` OAuth client must have `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` and `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` permissions.
 
 4. **Run the Test Suite**:
    - Click "Run" on the collection
@@ -442,24 +442,16 @@ If your game uses Epic Account Services (EAS) or Epic Launcher authentication:
 
 This error occurs when the **OAuth client calling the service** doesn't have the required VOICE permissions.
 
-#### For AGS Private Cloud
-
 1. **Identify which OAuth client is calling the service** (your game server or game client)
 2. **Add the required permissions to that OAuth client**:
-   - `ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` - for generating admin session tokens
-   - `ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` - for revoking tokens
+   - `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` - for generating admin session tokens
+   - `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` - for revoking tokens
 3. **Regenerate the access token** after adding permissions
 4. **Use the new token** when calling admin endpoints
 
-#### For AGS Shared Cloud
-
-- :warning: **Admin endpoints are not supported in Shared Cloud** because custom permissions cannot be created
-- The required `ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` and `ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` permissions are only available in Private Cloud
-- **Workaround**: Use public endpoints (`POST /public/party/{party_id}/token` and `POST /public/session/{session_id}/token`) which work in both Shared and Private Cloud
-
 #### Important Notes
 
-- Regular user tokens cannot access admin endpoints (even in Private Cloud)
+- Regular user tokens cannot access admin endpoints
 - Only OAuth clients with `client_credentials` grant type and VOICE permissions can call admin endpoints
 - The VOICE permissions should be added to the **game client/server OAuth client**, not the extend service's OAuth client
 

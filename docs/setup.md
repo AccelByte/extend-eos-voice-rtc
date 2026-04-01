@@ -224,14 +224,12 @@ Your game client or game server needs an OAuth client to call this service's end
 - No special permissions required beyond basic user permissions
 - Users can call: `POST /public/party/{party_id}/token`, `POST /public/session/{session_id}/token`
 
-#### b. For Admin Endpoints (Admin token - **Private Cloud Only**)
+#### b. For Admin Endpoints
 
 - Create an OAuth client with `client_credentials` grant type
 - Add the following custom permissions:
-  - `ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` - for `POST /admin/session/{session_id}/token`
-  - `ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` - for `POST /admin/room/{room_id}/token/revoke`
-
-> :warning: **Admin endpoints require AGS Private Cloud**: Custom permissions like `VOICE [CREATE]` and `VOICE [DELETE]` cannot be created in AGS Shared Cloud. Admin endpoints will only work in Private Cloud environments. If you're using Shared Cloud, use public endpoints instead.
+  - `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` - for `POST /admin/session/{session_id}/token`
+  - `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` - for `POST /admin/room/{room_id}/token/revoke`
 
 ---
 

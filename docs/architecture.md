@@ -84,12 +84,10 @@ The service uses AccelByte IAM's permission-based authorization to secure admin 
 - `POST /public/party/{party_id}/token` - No special permissions required
 - `POST /public/session/{session_id}/token` - No special permissions required (use `team` and `session` query params to control which tokens are generated)
 
-### Admin Endpoints (Admin Tokens with Permissions - **Private Cloud Only**)
+### Admin Endpoints
 
-- `POST /admin/session/{session_id}/token` - Requires `ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]`
-- `POST /admin/room/{room_id}/token/revoke` - Requires `ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]`
-
-> :warning: **Admin endpoints are only available in AGS Private Cloud**: Custom permissions (like `VOICE [CREATE]` and `VOICE [DELETE]`) cannot be created in AGS Shared Cloud. If you attempt to use admin endpoints in Shared Cloud without these permissions, you will receive a `403 Permission Denied` error. Use public endpoints for Shared Cloud deployments.
+- `POST /admin/session/{session_id}/token` - Requires `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]`
+- `POST /admin/room/{room_id}/token/revoke` - Requires `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]`
 
 ### How Authorization Works
 

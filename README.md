@@ -280,9 +280,9 @@ curl -s -X POST "http://localhost:8000/eos-voice/public/session/<session_id>/tok
   -H "Content-Type: application/json"
 ```
 
-#### Revoke a User's Voice Token (Admin — Private Cloud only)
+#### Revoke a User's Voice Token (Admin)
 
-First get an admin token using `client_credentials` grant (requires `VOICE [DELETE]` permission):
+First get an admin token using `client_credentials` grant (requires `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` permission):
 
 ```bash
 ADMIN_TOKEN=$(curl -s -X POST "https://test.accelbyte.io/iam/v3/oauth/token" \
@@ -322,15 +322,13 @@ curl -s -X POST "http://localhost:8000/eos-voice/admin/room/<room_id>/token/revo
 
 ## API Reference
 
-| Method | Endpoint | Auth | Availability |
-|--------|----------|------|--------------|
-| GET | `/v1/health` | None | All |
-| POST | `/public/party/{party_id}/token` | User token | Shared & Private Cloud |
-| POST | `/public/session/{session_id}/token` | User token | Shared & Private Cloud |
-| POST | `/admin/session/{session_id}/token` | Admin token + `VOICE [CREATE]` | **Private Cloud only** |
-| POST | `/admin/room/{room_id}/token/revoke` | Admin token + `VOICE [DELETE]` | **Private Cloud only** |
-
-> Admin endpoints require custom `VOICE` permissions that are not available in AGS Shared Cloud.
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| GET | `/v1/health` | None |
+| POST | `/public/party/{party_id}/token` | User token |
+| POST | `/public/session/{session_id}/token` | User token |
+| POST | `/admin/session/{session_id}/token` | Admin token + `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [CREATE]` |
+| POST | `/admin/room/{room_id}/token/revoke` | Admin token + `CUSTOM:ADMIN:NAMESPACE:{namespace}:VOICE [DELETE]` |
 
 ---
 
